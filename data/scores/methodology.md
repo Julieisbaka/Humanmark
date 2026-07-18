@@ -1,0 +1,1 @@
+Methodology is designed to match Artificial Analysis. This can be found at <https://artificialanalysis.ai/methodology/intelligence-benchmarking>
