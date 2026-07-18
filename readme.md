@@ -1,0 +1,3 @@
+# Humanmark
+
+Humanmark is a free and open-source website that allows users to compare themselves against AI models on a variety of AI benchmarks.
