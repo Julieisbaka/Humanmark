@@ -24,7 +24,9 @@ def _iter_html_pages(src_dir: Path) -> list[Path]:
 def _to_url(base_url: str, src_dir: Path, html_file: Path) -> str:
     """Convert a source HTML path into an absolute page URL."""
     relative = html_file.relative_to(src_dir)
-    page_path = "/" if relative.name.lower() == "index.html" else f"/{relative.as_posix()}"
+    page_path = (
+        "/" if relative.name.lower() == "index.html" else f"/{relative.as_posix()}"
+    )
     return f"{base_url.rstrip('/')}{page_path}"
 
 
@@ -62,7 +64,9 @@ def generate_sitemap(src_dir: Path, output_file: Path, base_url: str) -> int:
 def _parse_args() -> argparse.Namespace:
     project_root = Path(__file__).resolve().parents[1]
 
-    parser = argparse.ArgumentParser(description="Generate sitemap.xml from src HTML files.")
+    parser = argparse.ArgumentParser(
+        description="Generate sitemap.xml from src HTML files."
+    )
     parser.add_argument(
         "--src",
         type=Path,
@@ -92,7 +96,9 @@ def main() -> None:
     if not src_dir.exists() or not src_dir.is_dir():
         raise SystemExit(f"Source directory not found: {src_dir}")
 
-    count = generate_sitemap(src_dir=src_dir, output_file=output_file, base_url=args.base_url)
+    count = generate_sitemap(
+        src_dir=src_dir, output_file=output_file, base_url=args.base_url
+    )
     print(f"Generated {output_file} with {count} URL(s).")
 
 
