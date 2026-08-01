@@ -2,7 +2,6 @@ import {
 	buildLeaderboard,
 	compareAgainstModels,
 	formatDate,
-	formatDelta,
 	formatPercent,
 	formatRank,
 	getBenchmarkModels,
@@ -32,16 +31,14 @@ async function loadJSON(relativePath) {
 }
 
 async function init() {
-	const [benchmarksData, currentScores, lastWeekScores] = await Promise.all([
+	const [benchmarksData, currentScores] = await Promise.all([
 		loadJSON(`${DATA_ROOT}/benchmarks/index.json`),
 		loadJSON(`${DATA_ROOT}/scores/current.json`),
-		loadJSON(`${DATA_ROOT}/scores/last_week.json`),
 	]);
 
 	const appData = {
 		benchmarksData,
 		currentScores,
-		lastWeekScores,
 		benchmarkIndex: benchmarksData.benchmarks ?? [],
 	};
 
@@ -100,7 +97,7 @@ function renderHome(appData) {
 	const preview = document.querySelector('[data-role="benchmark-preview"]');
 	const scoreboard = document.querySelector('[data-role="scoreboard"]');
 	const form = document.querySelector('[data-role="benchmark-form"]');
-	const { benchmarkIndex, benchmarksData, currentScores, lastWeekScores } = appData;
+	const { benchmarkIndex, benchmarksData, currentScores } = appData;
 
 	const renderQuestionCounts = (benchmark) => {
 		const maxCount = Math.max(1, Math.min(benchmark.questionCount ?? benchmark.questions?.length ?? 1, 10));
@@ -112,9 +109,7 @@ function renderHome(appData) {
 
 	const renderPreview = (benchmark) => {
 		const currentModels = getModels(benchmark.id, currentScores);
-		const previousModels = getModels(benchmark.id, lastWeekScores);
 		const topCurrent = getTopModel(currentModels);
-		const topPrevious = getTopModel(previousModels);
 
 		preview.innerHTML = `
 			<article class="panel panel--soft">
@@ -150,50 +145,46 @@ function renderHome(appData) {
 					Top model this week: <strong>${topCurrent?.model ?? 'Unavailable'}</strong>
 					(${topCurrent ? formatPercent(topCurrent.score) : 'n/a'})
 				</p>
-				<p>
-					Last week: <strong>${topPrevious?.model ?? 'Unavailable'}</strong>
-					(${topPrevious ? formatPercent(topPrevious.score) : 'n/a'})
-				</p>
-				<p>Comparisons use current and previous score snapshots from JSON.</p>
+				<p>Comparisons use the current score snapshot from JSON.</p>
 			</article>
 		`;
 	};
 
-		benchmarkIndex.forEach((benchmark) => {
+	benchmarkIndex.forEach((benchmark) => {
 		const option = document.createElement('option');
 		option.value = benchmark.id;
 		option.textContent = benchmark.name;
 		benchmarkSelect.appendChild(option);
 	});
 
-		const applySelection = async () => {
-			const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
+	const applySelection = async () => {
+		const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
 
 		if (!benchmark) {
 			return;
 		}
 
-			const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
-			renderQuestionCounts(benchmarkDetails ?? benchmark);
-			renderPreview(benchmarkDetails ?? benchmark);
+		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+		renderQuestionCounts(benchmarkDetails ?? benchmark);
+		renderPreview(benchmarkDetails ?? benchmark);
 	};
 
 	benchmarkSelect.addEventListener('change', applySelection);
-		form.addEventListener('submit', async (event) => {
+	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
 
-			const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
-			if (!benchmark) {
-				return;
-			}
+		const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
+		if (!benchmark) {
+			return;
+		}
 
-			const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
-			if (!benchmarkDetails || !benchmarkDetails.questions) {
-				return;
-			}
+		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+		if (!benchmarkDetails || !benchmarkDetails.questions) {
+			return;
+		}
 
-			const questionCount = Number(questionCountSelect.value);
-			const selectedQuestions = selectQuestions(benchmarkDetails, questionCount);
+		const questionCount = Number(questionCountSelect.value);
+		const selectedQuestions = selectQuestions(benchmarkDetails, questionCount);
 
 		saveState({
 			benchmarkId: benchmark.id,
@@ -279,7 +270,6 @@ async function renderQuestions(appData) {
 
 		const score = scoreBenchmark(benchmark, selectedQuestions, responses);
 		const currentModels = getModels(benchmark.id, currentScores);
-		const previousModels = getModels(benchmark.id, lastWeekScores);
 
 		saveState({
 			...state,
@@ -287,7 +277,6 @@ async function renderQuestions(appData) {
 			completedAt: new Date().toISOString(),
 			score,
 			currentModels,
-			previousModels,
 		});
 
 		window.location.href = 'results.html';
@@ -311,8 +300,7 @@ async function renderResults(appData) {
 		state.questionIds.includes(question.id),
 	);
 	const currentModels = state.currentModels ?? getModels(benchmark.id, appData.currentScores);
-	const previousModels = state.previousModels ?? getModels(benchmark.id, appData.lastWeekScores);
-	const comparisons = compareAgainstModels(state.score, currentModels, previousModels);
+	const comparisons = compareAgainstModels(state.score, currentModels);
 	const userLeaderboard = buildLeaderboard(state.score, currentModels);
 	const currentRank = userLeaderboard.find((entry) => entry.isUser)?.estimatedRank ?? null;
 
@@ -356,8 +344,6 @@ async function renderResults(appData) {
 							<th>Rank</th>
 							<th>Model</th>
 							<th>Current</th>
-							<th>Last week</th>
-							<th>Change</th>
 							<th>You vs model</th>
 						</tr>
 					</thead>
@@ -370,8 +356,6 @@ async function renderResults(appData) {
 										<td>${formatRank(comparison.rank)}</td>
 										<td>${comparison.model}</td>
 										<td>${formatPercent(comparison.score)}</td>
-										<td>${comparison.previousScore === null ? '—' : formatPercent(comparison.previousScore)}</td>
-										<td>${comparison.previousScore === null ? '—' : formatDelta(comparison.weekDelta)}</td>
 										<td><span class="verdict ${verdictClass}">${verdictLabel(comparison.verdict)}</span></td>
 									</tr>
 								`;

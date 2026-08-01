@@ -138,13 +138,9 @@ export function getBenchmarkModels(snapshot, benchmarkId) {
 	return snapshot?.benchmarks?.[benchmarkId]?.models ?? [];
 }
 
-export function compareAgainstModels(userSummary, models, previousModels = []) {
-	const previousById = new Map(previousModels.map((model) => [model.modelId, model]));
-
+export function compareAgainstModels(userSummary, models) {
 	return [...models]
 		.map((model) => {
-			const previous = previousById.get(model.modelId) ?? null;
-			const delta = model.score - (previous?.score ?? model.score);
 			const userDelta = userSummary.accuracy - model.score;
 			const verdict =
 				userSummary.lowerBound > model.score
@@ -155,9 +151,6 @@ export function compareAgainstModels(userSummary, models, previousModels = []) {
 
 			return {
 				...model,
-				previousScore: previous?.score ?? null,
-				previousRank: previous?.rank ?? null,
-				weekDelta: delta,
 				userDelta,
 				verdict,
 			};

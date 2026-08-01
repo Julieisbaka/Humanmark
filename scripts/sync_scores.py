@@ -1,11 +1,10 @@
-"""Sync current and previous-week model score snapshots.
+"""Sync the current model score snapshot.
 
 The script is intentionally generic: it expects the remote source to return a
 JSON object that already matches the repository score snapshot shape, or a
 wrapper object containing the snapshot under a `current` key.
 
-On each successful run, the existing current snapshot is rotated into the
-last-week snapshot before the new current snapshot is written.
+On each successful run, the latest snapshot is written to `current.json`.
 """
 
 from __future__ import annotations
@@ -13,7 +12,6 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import shutil
 from pathlib import Path
 from typing import Any
 from urllib.error import HTTPError, URLError
@@ -105,16 +103,8 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
-def sync_scores(source: dict[str, Any], current_file: Path, last_week_file: Path) -> Path:
+def sync_scores(source: dict[str, Any], current_file: Path) -> Path:
     current_snapshot = _extract_snapshot(source)
-
-    if current_file.exists():
-        last_week_file.parent.mkdir(parents=True, exist_ok=True)
-        shutil.copy2(current_file, last_week_file)
-
-    elif not last_week_file.exists():
-        last_week_file.parent.mkdir(parents=True, exist_ok=True)
-        _write_json(last_week_file, current_snapshot)
 
     _write_json(current_file, current_snapshot)
     return current_file
@@ -138,12 +128,6 @@ def _parse_args() -> argparse.Namespace:
         default=Path("data/scores/current.json"),
         help="Path to the current snapshot JSON file.",
     )
-    parser.add_argument(
-        "--last-week-file",
-        type=Path,
-        default=Path("data/scores/last_week.json"),
-        help="Path to the last-week snapshot JSON file.",
-    )
     return parser.parse_args()
 
 
@@ -158,7 +142,7 @@ def main() -> None:
     else:
         payload = _load_json_from_path(Path(args.source_url))
 
-    output = sync_scores(payload, args.current_file.resolve(), args.last_week_file.resolve())
+    output = sync_scores(payload, args.current_file.resolve())
     print(f"Wrote refreshed score snapshot to {output}")
 
 
