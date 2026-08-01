@@ -72,19 +72,24 @@
 
 .question-card {
 	margin: 0;
-	padding: 18px;
-	border-radius: 20px;
-	border: 1px solid var(--border);
-	background: rgba(14, 22, 40, 0.84);
+	padding: 0 0 22px;
+	border: 0;
+	border-bottom: 1px solid rgba(157, 177, 255, 0.14);
+	background: transparent;
 }
 
 .question-card legend {
 	display: grid;
-	gap: 8px;
+	gap: 10px;
 	padding: 0;
-	margin-bottom: 14px;
+	margin-bottom: 18px;
 	font-weight: 700;
 	max-width: 100%;
+}
+
+.question-card legend .question-prompt {
+	padding-top: 2px;
+	font-size: 1.03rem;
 }
 
 .question-prompt {
@@ -138,20 +143,33 @@
 
 .choice-list {
 	display: grid;
-	gap: 8px;
+	gap: 10px;
 }
 
 .choice-item {
 	display: flex;
 	align-items: flex-start;
 	gap: 10px;
-	padding: 4px 0;
-	background: transparent;
-	border: 0;
+	padding: 10px 12px;
+	background: rgba(14, 22, 40, 0.28);
+	border: 1px solid rgba(157, 177, 255, 0.1);
+	border-radius: 12px;
+	transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .choice-item input {
 	accent-color: var(--accent-2);
+}
+
+.choice-item:hover {
+	background: rgba(14, 22, 40, 0.5);
+	border-color: rgba(157, 177, 255, 0.18);
+	transform: translateY(-1px);
+}
+
+.choice-item:has(input:checked) {
+	background: rgba(138, 180, 248, 0.1);
+	border-color: rgba(138, 180, 248, 0.24);
 }
 
 .score-ring {
@@ -197,6 +215,12 @@
 .leaderboard-summary {
 	margin: 0 0 12px;
 	color: var(--muted);
+}
+
+.leaderboard-actions {
+	display: flex;
+	justify-content: flex-start;
+	margin-bottom: 12px;
 }
 
 .score-table {
@@ -281,4 +305,28 @@
 	margin-top: 10px;
 	padding-top: 10px;
 	border-top: 1px dashed var(--border);
+}
+
+.review-explanation summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.review-explanation summary::-webkit-details-marker {
+	display: none;
+}
+
+.review-explanation-toggle {
+	color: var(--accent-2);
+	font-size: 0.86rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.review-explanation > .markdown-content {
+	margin-top: 12px;
 }

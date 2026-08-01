@@ -2,6 +2,9 @@ import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, form
 import { escapeHtml, loadBenchmarkDetails, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
+const DEFAULT_LEADERBOARD_LIMIT = 100;
+const LEADERBOARD_CONTEXT_WINDOW = 5;
+
 export async function renderResults(appData) {
 	const state = getState();
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
@@ -21,6 +24,8 @@ export async function renderResults(appData) {
 	const userLeaderboard = buildLeaderboard(state.score, currentModels);
 	const comparisonByModelKey = new Map(comparisons.map((comparison) => [String(comparison.modelId ?? comparison.model), comparison]));
 	const currentRank = userLeaderboard.find((entry) => entry.isUser)?.estimatedRank ?? null;
+	const userIndex = userLeaderboard.findIndex((entry) => entry.isUser);
+	let showAllLeaderboardRows = false;
 
 	meta.innerHTML = `
 		<p class="eyebrow">${benchmark.name}</p>
@@ -78,6 +83,9 @@ export async function renderResults(appData) {
 				</label>
 			</div>
 			<p class="leaderboard-summary" data-role="leaderboard-summary"></p>
+			<div class="leaderboard-actions" data-role="leaderboard-actions" hidden>
+				<button class="button button--ghost" type="button" data-role="leaderboard-show-more">Show more models</button>
+			</div>
 			<div class="table-wrap">
 				<table class="score-table">
 					<thead>
@@ -98,6 +106,28 @@ export async function renderResults(appData) {
 	const leaderboardFilter = leaderboard.querySelector('[data-role="leaderboard-filter"]');
 	const leaderboardBody = leaderboard.querySelector('[data-role="leaderboard-body"]');
 	const leaderboardSummary = leaderboard.querySelector('[data-role="leaderboard-summary"]');
+	const leaderboardActions = leaderboard.querySelector('[data-role="leaderboard-actions"]');
+	const leaderboardShowMore = leaderboard.querySelector('[data-role="leaderboard-show-more"]');
+
+	const getDefaultVisibleRows = () => {
+		const visibleRowIndexes = new Set();
+		const maxTopRows = Math.min(DEFAULT_LEADERBOARD_LIMIT, userLeaderboard.length);
+
+		for (let index = 0; index < maxTopRows; index += 1) {
+			visibleRowIndexes.add(index);
+		}
+
+		if (userIndex >= 0) {
+			const start = Math.max(0, userIndex - LEADERBOARD_CONTEXT_WINDOW);
+			const end = Math.min(userLeaderboard.length - 1, userIndex + LEADERBOARD_CONTEXT_WINDOW);
+
+			for (let index = start; index <= end; index += 1) {
+				visibleRowIndexes.add(index);
+			}
+		}
+
+		return userLeaderboard.filter((_, index) => visibleRowIndexes.has(index));
+	};
 
 	const renderLeaderboardRows = () => {
 		const query = String(leaderboardSearch?.value ?? '').trim().toLowerCase();
@@ -129,23 +159,40 @@ export async function renderResults(appData) {
 			return comparison?.verdict === filterValue;
 		});
 
+		const limitedRows = getDefaultVisibleRows();
+		const useDefaultLimit = !showAllLeaderboardRows && !query && filterValue === 'all';
+		const rowsToRender = useDefaultLimit ? limitedRows : filteredRows;
+		const hiddenDefaultCount = Math.max(0, userLeaderboard.length - limitedRows.length);
+
 		if (leaderboardSummary) {
-			leaderboardSummary.textContent = `${filteredRows.length} row${filteredRows.length === 1 ? '' : 's'} shown. "You" rank is temporary for this run and is not saved.`;
+			if (useDefaultLimit && hiddenDefaultCount > 0) {
+				leaderboardSummary.textContent = `Showing the top ${Math.min(DEFAULT_LEADERBOARD_LIMIT, userLeaderboard.length)} models and ${LEADERBOARD_CONTEXT_WINDOW} models around your rank. ${hiddenDefaultCount} more row${hiddenDefaultCount === 1 ? '' : 's'} are hidden.`;
+			} else {
+				leaderboardSummary.textContent = `${rowsToRender.length} row${rowsToRender.length === 1 ? '' : 's'} shown.`;
+			}
+		}
+
+		if (leaderboardActions && leaderboardShowMore) {
+			const shouldShowAction = useDefaultLimit && hiddenDefaultCount > 0;
+			leaderboardActions.hidden = !shouldShowAction;
+			leaderboardShowMore.textContent = shouldShowAction
+				? `Show more models (${hiddenDefaultCount} hidden)`
+				: 'Show more models';
 		}
 
 		if (!leaderboardBody) {
 			return;
 		}
 
-		leaderboardBody.innerHTML = filteredRows
+		leaderboardBody.innerHTML = rowsToRender
 			.map((entry) => {
 				if (entry.isUser) {
 					return `
 						<tr class="leaderboard-you-row">
 							<td>${formatRank(entry.estimatedRank)}</td>
-							<td><strong>You</strong> <span class="leaderboard-you-tag">Current run</span></td>
+							<td><strong>You</strong></td>
 							<td>${formatPercent(entry.score)}</td>
-							<td><span class="verdict verdict--within">Temporary rank</span></td>
+							<td><span class="verdict verdict--within">Shown for this run</span></td>
 						</tr>
 					`;
 				}
@@ -168,6 +215,10 @@ export async function renderResults(appData) {
 
 	leaderboardSearch?.addEventListener('input', renderLeaderboardRows);
 	leaderboardFilter?.addEventListener('change', renderLeaderboardRows);
+	leaderboardShowMore?.addEventListener('click', () => {
+		showAllLeaderboardRows = true;
+		renderLeaderboardRows();
+	});
 	renderLeaderboardRows();
 
 	review.innerHTML = `
@@ -181,7 +232,7 @@ export async function renderResults(appData) {
 					.map((question, index) => {
 						const explanation = question.explanation ?? question.answerExplanation ?? question.rationale ?? question.solution ?? question.analysis ?? '';
 						const explanationMarkup = String(explanation).trim()
-							? `<div class="review-explanation"><p class="eyebrow">Benchmark explanation</p><div class="markdown-content">${renderMarkdown(explanation)}</div></div>`
+							? `<details class="review-explanation"><summary><span class="eyebrow">Benchmark explanation</span><span class="review-explanation-toggle">Show explanation</span></summary><div class="markdown-content">${renderMarkdown(explanation)}</div></details>`
 							: '';
 						const selected = question.selectedIndex === null ? 'No answer selected' : question.choices[question.selectedIndex];
 
