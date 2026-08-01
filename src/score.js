@@ -6,32 +6,21 @@ export function clamp(value, minimum, maximum) {
 	return Math.min(Math.max(value, minimum), maximum);
 }
 
-function hashString(value) {
-	let hash = 2166136261;
-
-	for (let index = 0; index < value.length; index += 1) {
-		hash ^= value.charCodeAt(index);
-		hash = Math.imul(hash, 16777619);
+function randomFloat() {
+	if (window.crypto?.getRandomValues) {
+		const values = new Uint32Array(1);
+		window.crypto.getRandomValues(values);
+		return values[0] / 0x100000000;
 	}
 
-	return hash >>> 0;
+	return Math.random();
 }
 
-function mulberry32(seed) {
-	return function random() {
-		let t = (seed += 0x6d2b79f5);
-		t = Math.imul(t ^ (t >>> 15), t | 1);
-		t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-		return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-	};
-}
-
-function shuffle(values, seedText) {
+function shuffle(values) {
 	const items = [...values];
-	const random = mulberry32(hashString(seedText));
 
 	for (let index = items.length - 1; index > 0; index -= 1) {
-		const swapIndex = Math.floor(random() * (index + 1));
+		const swapIndex = Math.floor(randomFloat() * (index + 1));
 		[items[index], items[swapIndex]] = [items[swapIndex], items[index]];
 	}
 
@@ -41,9 +30,8 @@ function shuffle(values, seedText) {
 export function selectQuestions(benchmark, count) {
 	const total = benchmark?.questions?.length ?? 0;
 	const targetCount = clamp(Number(count) || 0, 0, total);
-	const seedText = `${benchmark?.id ?? 'benchmark'}:${targetCount}:${total}`;
 
-	return shuffle(benchmark.questions ?? [], seedText).slice(0, targetCount);
+	return shuffle(benchmark.questions ?? []).slice(0, targetCount);
 }
 
 export function calculateMarginOfError(correctCount, totalQuestions, confidence = DEFAULT_CONFIDENCE) {
