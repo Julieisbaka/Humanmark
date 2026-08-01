@@ -26,9 +26,9 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "tags": ["science", "reasoning", "4 options"],
         "toolPolicy": {
             "modelToolsAllowed": False,
-            "humanToolsAllowed": False,
+            "humanToolsAllowed": True,
             "allowedTools": [],
-            "notes": "Tool rules should stay aligned between model and human attempts.",
+            "notes": "Policy is shown for reference.",
         },
         "generatedQuestionsFile": "gpqa_diamond.json",
         "file": "gpqa_diamond.json",
@@ -43,9 +43,9 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "tags": ["knowledge", "broad coverage", "10 options"],
         "toolPolicy": {
             "modelToolsAllowed": False,
-            "humanToolsAllowed": False,
+            "humanToolsAllowed": True,
             "allowedTools": [],
-            "notes": "Tool rules should stay aligned between model and human attempts.",
+            "notes": "Policy is shown for reference.",
         },
         "generatedQuestionsFile": "mmlu_pro.json",
         "file": "mmlu_pro.json",

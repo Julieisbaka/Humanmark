@@ -17,6 +17,7 @@ const SETTINGS_KEY = 'humanmark-settings';
 const DEFAULT_QUESTIONS_PER_PAGE = 5;
 const MIN_QUESTIONS_PER_PAGE = 1;
 const MAX_QUESTIONS_PER_PAGE = 20;
+const DEFAULT_SORT_NUMERIC_CHOICES = true;
 
 const PAGE = document.body.dataset.page;
 
@@ -105,7 +106,10 @@ function clampQuestionsPerPage(value) {
 }
 
 function loadSettings() {
-	const fallback = { questionsPerPage: DEFAULT_QUESTIONS_PER_PAGE };
+	const fallback = {
+		questionsPerPage: DEFAULT_QUESTIONS_PER_PAGE,
+		sortNumericChoices: DEFAULT_SORT_NUMERIC_CHOICES,
+	};
 	const raw = window.localStorage.getItem(SETTINGS_KEY);
 
 	if (!raw) {
@@ -116,6 +120,10 @@ function loadSettings() {
 		const parsed = JSON.parse(raw);
 		return {
 			questionsPerPage: clampQuestionsPerPage(parsed?.questionsPerPage),
+			sortNumericChoices:
+				typeof parsed?.sortNumericChoices === 'boolean'
+					? parsed.sortNumericChoices
+					: DEFAULT_SORT_NUMERIC_CHOICES,
 		};
 	} catch {
 		return fallback;
@@ -127,8 +135,73 @@ function saveSettings(settings) {
 		SETTINGS_KEY,
 		JSON.stringify({
 			questionsPerPage: clampQuestionsPerPage(settings?.questionsPerPage),
+			sortNumericChoices: Boolean(settings?.sortNumericChoices),
 		}),
 	);
+}
+
+function parseSortableChoiceValue(choice) {
+	if (choice === null || choice === undefined) {
+		return null;
+	}
+
+	const raw = String(choice).trim();
+	if (!raw) {
+		return null;
+	}
+
+	const normalized = raw.replaceAll(',', '');
+	const numberPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i;
+	const percentPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?%$/i;
+
+	if (percentPattern.test(normalized)) {
+		return Number.parseFloat(normalized.slice(0, -1)) / 100;
+	}
+
+	if (numberPattern.test(normalized)) {
+		return Number.parseFloat(normalized);
+	}
+
+	return null;
+}
+
+function sortQuestionChoicesForHumans(question, enabled) {
+	if (!enabled) {
+		return question;
+	}
+
+	const choices = question?.choices ?? [];
+	if (choices.length < 2) {
+		return question;
+	}
+
+	const parsedChoices = choices.map((choice, index) => ({
+		index,
+		choice,
+		value: parseSortableChoiceValue(choice),
+	}));
+
+	if (parsedChoices.some((entry) => entry.value === null)) {
+		return question;
+	}
+
+	const originalAnswerIndex = Number(question.answerIndex);
+	if (!Number.isInteger(originalAnswerIndex)) {
+		return question;
+	}
+
+	const sortedChoices = [...parsedChoices].sort((left, right) => left.value - right.value || left.index - right.index);
+	const nextAnswerIndex = sortedChoices.findIndex((entry) => entry.index === originalAnswerIndex);
+
+	if (nextAnswerIndex < 0) {
+		return question;
+	}
+
+	return {
+		...question,
+		choices: sortedChoices.map((entry) => entry.choice),
+		answerIndex: nextAnswerIndex,
+	};
 }
 
 function escapeHtml(value) {
@@ -219,12 +292,50 @@ function renderMathIn(element) {
 	});
 }
 
+function normalizeChoiceText(value) {
+	return String(value)
+		.trim()
+		.replace(/^[a-z]\s*[\)\.\-:]\s*/i, '')
+		.replace(/^\d+\s*[\)\.\-:]\s*/, '')
+		.replace(/\s+/g, ' ')
+		.toLowerCase();
+}
+
+function stripDuplicatedChoiceLines(prompt, choices) {
+	if (!prompt) {
+		return '';
+	}
+
+	if (!Array.isArray(choices) || !choices.length) {
+		return String(prompt);
+	}
+
+	const lines = String(prompt).split(/\r?\n/);
+	if (lines.length <= 1) {
+		return String(prompt);
+	}
+
+	const normalizedChoices = new Set(choices.map((choice) => normalizeChoiceText(choice)));
+
+	const filteredLines = lines.filter((line, index) => {
+		if (index === 0) {
+			return true;
+		}
+
+		const normalizedLine = normalizeChoiceText(line);
+		return !normalizedChoices.has(normalizedLine);
+	});
+
+	return filteredLines.join('\n');
+}
+
 function renderSettings() {
 	const form = document.querySelector('[data-role="settings-form"]');
 	const questionsPerPageInput = document.querySelector('[data-role="setting-questions-per-page"]');
+	const sortNumericChoicesInput = document.querySelector('[data-role="setting-sort-numeric-choices"]');
 	const status = document.querySelector('[data-role="settings-status"]');
 
-	if (!form || !questionsPerPageInput) {
+	if (!form || !questionsPerPageInput || !sortNumericChoicesInput) {
 		return;
 	}
 
@@ -232,12 +343,14 @@ function renderSettings() {
 	questionsPerPageInput.min = String(MIN_QUESTIONS_PER_PAGE);
 	questionsPerPageInput.max = String(MAX_QUESTIONS_PER_PAGE);
 	questionsPerPageInput.value = String(settings.questionsPerPage);
+	sortNumericChoicesInput.checked = Boolean(settings.sortNumericChoices);
 
 	form.addEventListener('submit', (event) => {
 		event.preventDefault();
 
 		saveSettings({
 			questionsPerPage: questionsPerPageInput.value,
+			sortNumericChoices: sortNumericChoicesInput.checked,
 		});
 
 		if (status) {
@@ -287,21 +400,23 @@ function summarizeToolPolicy(toolPolicy) {
 
 	const modelAllowed = Boolean(toolPolicy.modelToolsAllowed);
 	const humanAllowed = Boolean(toolPolicy.humanToolsAllowed);
-	const parityNote =
-		modelAllowed === humanAllowed
-			? 'Model and human tool rules are aligned.'
-			: 'Model and human tool rules are not aligned.';
-
-	if (!humanAllowed) {
-		return `${parityNote} No external tools are allowed for this benchmark.`;
-	}
 
 	const allowedTools = (toolPolicy.allowedTools ?? []).filter(Boolean);
-	if (!allowedTools.length) {
-		return `${parityNote} External tools are allowed.`;
+	const modelMessage = modelAllowed
+		? allowedTools.length
+			? `Model evaluations allowed tools: ${allowedTools.join(', ')}.`
+			: 'Model evaluations allowed external tools.'
+		: 'Model evaluations did not use external tools.';
+
+	const humanMessage = humanAllowed
+		? 'Human participants may use tools.'
+		: 'Human participants should not use tools.';
+
+	if (!toolPolicy.notes) {
+		return `${modelMessage} ${humanMessage}`;
 	}
 
-	return `${parityNote} Allowed tools: ${allowedTools.join(', ')}.`;
+	return `${modelMessage} ${humanMessage} ${toolPolicy.notes}`;
 }
 
 function renderHome(appData) {
@@ -328,8 +443,12 @@ function renderHome(appData) {
 			return;
 		}
 
-		const maxCount = Math.min(availableQuestions, 10);
-		questionCountSelect.value = String(maxCount);
+		const maxCount = availableQuestions;
+		const currentValue = Number(questionCountSelect.value);
+		const defaultValue = Math.min(10, maxCount);
+		const nextValue = Number.isFinite(currentValue) && currentValue > 0 ? Math.min(currentValue, maxCount) : defaultValue;
+
+		questionCountSelect.value = String(nextValue);
 		questionCountSelect.min = '1';
 		questionCountSelect.max = String(maxCount);
 		questionCountSelect.placeholder = `1-${maxCount}`;
@@ -439,6 +558,7 @@ async function renderQuestions(appData) {
 	const state = getState();
 	const settings = loadSettings();
 	const questionsPerPage = clampQuestionsPerPage(settings.questionsPerPage);
+	const sortNumericChoices = Boolean(settings.sortNumericChoices);
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const container = document.querySelector('[data-role="questions-shell"]');
 	const status = document.querySelector('[data-role="questions-status"]');
@@ -448,9 +568,9 @@ async function renderQuestions(appData) {
 		return;
 	}
 
-	const selectedQuestions = benchmark.questions.filter((question) =>
-		state.questionIds.includes(question.id),
-	);
+	const selectedQuestions = benchmark.questions
+		.filter((question) => state.questionIds.includes(question.id))
+		.map((question) => sortQuestionChoicesForHumans(question, sortNumericChoices));
 	const totalPages = Math.max(1, Math.ceil(selectedQuestions.length / questionsPerPage));
 	let currentPage = Math.min(Math.max(Number(state.currentQuestionPage ?? 1), 1), totalPages);
 	let draftAnswers = { ...(state.answers ?? {}) };
@@ -487,7 +607,7 @@ async function renderQuestions(appData) {
 						<fieldset class="question-card">
 							<legend>
 								<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
-								<div class="question-prompt markdown-content">${renderMarkdown(question.prompt)}</div>
+								<div class="question-prompt markdown-content">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
 							</legend>
 							<div class="choice-list">
 								${question.choices
@@ -673,7 +793,7 @@ async function renderResults(appData) {
 							<section class="review-item ${question.isCorrect ? 'review-item--correct' : 'review-item--wrong'}">
 								<div>
 									<p class="eyebrow">Question ${index + 1}</p>
-									<div class="markdown-content review-prompt">${renderMarkdown(question.prompt)}</div>
+									<div class="markdown-content review-prompt">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
 								</div>
 								<dl class="stats-grid stats-grid--compact">
 									<div>

@@ -91,5 +91,6 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit --allow-empty -m "pages updated [skip ci]"
+          TRIGGER_SHA="${GITHUB_SHA:0:7}"
+          git commit --allow-empty -m "pages updated for ${TRIGGER_SHA} [skip ci]"
           git push origin HEAD:main

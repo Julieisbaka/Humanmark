@@ -136,6 +136,18 @@ body[data-page='questions'] .page-header h1 {
 	gap: 10px;
 }
 
+.field-toggle {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+}
+
+.field-toggle input[type='checkbox'] {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--accent);
+}
+
 .field span,
 dt {
 	color: var(--muted);
