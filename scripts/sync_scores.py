@@ -95,7 +95,6 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             "benchmarks": {
                 "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
                 "humanitys_last_exam": build_benchmark("humanitys_last_exam", "Humanity's Last Exam", ["humanitys_last_exam", "hle", "cais_hle"]),
-                "global_mmlu_lite": build_benchmark("global_mmlu_lite", "Global-MMLU-Lite", ["global_mmlu_lite", "global-mmlu-lite", "gmmlu_lite"]),
                 "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),
             },
         }

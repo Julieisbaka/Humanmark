@@ -18,9 +18,18 @@ from datasets import Dataset, DatasetDict, load_dataset
 
 
 QUESTION_KEYS = ("question", "prompt", "stem", "query", "input", "text")
-CHOICE_KEYS = ("choices", "options", "candidates", "answers")
+CHOICE_KEYS = (
+    "choices",
+    "options",
+    "candidates",
+    "choice_options",
+    "answer_choices",
+    "multiple_choice_options",
+    "mc_options",
+)
 ANSWER_KEYS = (
     "answer",
+    "answers",
     "label",
     "correct",
     "correct_answer",

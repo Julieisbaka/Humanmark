@@ -42,13 +42,6 @@ jobs:
           --split test
           --output data/benchmarks/generated/humanitys_last_exam.json
 
-      - name: Parse Global-MMLU-Lite
-        run: >
-          python scripts/benchmark.py CohereLabs/Global-MMLU-Lite
-          --task en
-          --split test
-          --output data/benchmarks/generated/global_mmlu_lite.json
-
       - name: Parse MMLU-Pro
         run: >
           python scripts/benchmark.py TIGER-Lab/MMLU-Pro

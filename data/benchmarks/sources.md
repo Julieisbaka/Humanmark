@@ -4,7 +4,6 @@ Idavidrein/gpqa, gpqa_diamond
 
 cais/hle
 
-CohereLabs/Global-MMLU-Lite, en
 
 Each benchmark lives in its own JSON file under `data/benchmarks/`.
 

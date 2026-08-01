@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')
+    if: github.event_name != 'push' || (github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
     runs-on: ubuntu-latest
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -47,7 +47,6 @@ jobs:
         run: |
           python scripts/benchmark.py Idavidrein/gpqa --task gpqa_diamond --split train --output data/benchmarks/generated/gpqa_diamond.json
           python scripts/benchmark.py cais/hle --split test --output data/benchmarks/generated/humanitys_last_exam.json
-          python scripts/benchmark.py CohereLabs/Global-MMLU-Lite --task en --split test --output data/benchmarks/generated/global_mmlu_lite.json
           python scripts/benchmark.py TIGER-Lab/MMLU-Pro --split test --output data/benchmarks/generated/mmlu_pro.json
           python scripts/build_benchmark_index.py
 
@@ -70,7 +69,7 @@ jobs:
           path: dist
 
   deploy:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')
+    if: github.event_name != 'push' || (github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -82,7 +81,7 @@ jobs:
         uses: actions/deploy-pages@v4
 
   mark-force-update:
-    if: github.event_name == 'push' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages'))
+    if: github.event_name == 'push' && github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages'))
     runs-on: ubuntu-latest
     needs: deploy
     steps:

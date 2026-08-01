@@ -49,22 +49,6 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "file": "humanitys_last_exam.json",
     },
     {
-        "id": "global_mmlu_lite",
-        "name": "Global-MMLU-Lite",
-        "description": "A multilingual 4-option knowledge benchmark spanning 23 languages and broad subject coverage.",
-        "options": 4,
-        "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 4},
-        "source": {"dataset": "CohereLabs/Global-MMLU-Lite", "subset": "en", "split": "test"},
-        "tags": ["knowledge", "multilingual", "4 options"],
-        "toolPolicy": {
-            "modelToolsAllowed": False,
-            "allowedTools": [],
-            "notes": "Use the same tool allowance for fair comparison.",
-        },
-        "generatedQuestionsFile": "global_mmlu_lite.json",
-        "file": "global_mmlu_lite.json",
-    },
-    {
         "id": "mmlu_pro",
         "name": "MMLU-Pro",
         "description": "A 10-option knowledge benchmark that makes broad coverage and precision both matter.",
