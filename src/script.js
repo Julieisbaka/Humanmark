@@ -38,17 +38,11 @@ async function init() {
 		loadJSON(`${DATA_ROOT}/scores/last_week.json`),
 	]);
 
-	const benchmarks = await Promise.all(
-		(benchmarksData.benchmarks ?? []).map((benchmark) =>
-			loadJSON(`${DATA_ROOT}/benchmarks/${benchmark.file}`),
-		),
-	);
-
 	const appData = {
 		benchmarksData,
 		currentScores,
 		lastWeekScores,
-		benchmarks,
+		benchmarkIndex: benchmarksData.benchmarks ?? [],
 	};
 
 	if (PAGE === 'home') {
@@ -57,12 +51,12 @@ async function init() {
 	}
 
 	if (PAGE === 'questions') {
-		renderQuestions(appData);
+		void renderQuestions(appData);
 		return;
 	}
 
 	if (PAGE === 'results') {
-		renderResults(appData);
+		void renderResults(appData);
 	}
 }
 
@@ -72,6 +66,24 @@ function getState() {
 
 function getBenchmark(benchmarks, benchmarkId) {
 	return benchmarks.find((benchmark) => benchmark.id === benchmarkId) ?? null;
+}
+
+async function loadBenchmarkDetails(appData, benchmarkId) {
+	const benchmarkMeta = getBenchmark(appData.benchmarkIndex, benchmarkId);
+
+	if (!benchmarkMeta) {
+		return null;
+	}
+
+	try {
+		const benchmarkData = await loadJSON(`${DATA_ROOT}/benchmarks/${benchmarkMeta.file}`);
+		return {
+			...benchmarkMeta,
+			...benchmarkData,
+		};
+	} catch {
+		return benchmarkMeta;
+	}
 }
 
 function getModels(benchmarkId, snapshot) {
@@ -88,19 +100,14 @@ function renderHome(appData) {
 	const preview = document.querySelector('[data-role="benchmark-preview"]');
 	const scoreboard = document.querySelector('[data-role="scoreboard"]');
 	const form = document.querySelector('[data-role="benchmark-form"]');
-	const { benchmarks, benchmarksData, currentScores, lastWeekScores } = appData;
+	const { benchmarkIndex, benchmarksData, currentScores, lastWeekScores } = appData;
 
 	const renderQuestionCounts = (benchmark) => {
-		questionCountSelect.innerHTML = '';
-
-		const maxCount = Math.min(benchmark.questions.length, 10);
-
-		for (let count = 1; count <= maxCount; count += 1) {
-			const option = document.createElement('option');
-			option.value = String(count);
-			option.textContent = `${count} question${count === 1 ? '' : 's'}`;
-			questionCountSelect.appendChild(option);
-		}
+		const maxCount = Math.max(1, Math.min(benchmark.questionCount ?? benchmark.questions?.length ?? 1, 10));
+		questionCountSelect.value = String(maxCount);
+		questionCountSelect.min = '1';
+		questionCountSelect.max = String(maxCount);
+		questionCountSelect.placeholder = `1-${maxCount}`;
 	};
 
 	const renderPreview = (benchmark) => {
@@ -117,7 +124,7 @@ function renderHome(appData) {
 				<dl class="stats-grid">
 					<div>
 						<dt>Question pool</dt>
-						<dd>${benchmark.questions.length}</dd>
+						<dd>${benchmark.questionCount ?? benchmark.questions?.length ?? 'Unavailable'}</dd>
 					</div>
 					<div>
 						<dt>Options</dt>
@@ -152,31 +159,41 @@ function renderHome(appData) {
 		`;
 	};
 
-	benchmarks.forEach((benchmark) => {
+		benchmarkIndex.forEach((benchmark) => {
 		const option = document.createElement('option');
 		option.value = benchmark.id;
 		option.textContent = benchmark.name;
 		benchmarkSelect.appendChild(option);
 	});
 
-	const applySelection = () => {
-		const benchmark = getBenchmark(benchmarkSelect.value) ?? benchmarks[0];
+		const applySelection = async () => {
+			const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
 
 		if (!benchmark) {
 			return;
 		}
 
-		renderQuestionCounts(benchmark);
-		renderPreview(benchmark);
+			const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+			renderQuestionCounts(benchmarkDetails ?? benchmark);
+			renderPreview(benchmarkDetails ?? benchmark);
 	};
 
 	benchmarkSelect.addEventListener('change', applySelection);
-	form.addEventListener('submit', (event) => {
+		form.addEventListener('submit', async (event) => {
 		event.preventDefault();
 
-		const benchmark = getBenchmark(benchmarkSelect.value) ?? benchmarks[0];
-		const questionCount = Number(questionCountSelect.value);
-		const selectedQuestions = selectQuestions(benchmark, questionCount);
+			const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
+			if (!benchmark) {
+				return;
+			}
+
+			const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+			if (!benchmarkDetails || !benchmarkDetails.questions) {
+				return;
+			}
+
+			const questionCount = Number(questionCountSelect.value);
+			const selectedQuestions = selectQuestions(benchmarkDetails, questionCount);
 
 		saveState({
 			benchmarkId: benchmark.id,
@@ -188,12 +205,12 @@ function renderHome(appData) {
 		window.location.href = 'questions.html';
 	});
 
-	applySelection();
+	void applySelection();
 }
 
-function renderQuestions(appData) {
+async function renderQuestions(appData) {
 	const state = getState();
-	const benchmark = state ? getBenchmark(appData.benchmarks, state.benchmarkId) : null;
+	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const container = document.querySelector('[data-role="questions-shell"]');
 	const status = document.querySelector('[data-role="questions-status"]');
 
@@ -277,9 +294,9 @@ function renderQuestions(appData) {
 	});
 }
 
-function renderResults(appData) {
+async function renderResults(appData) {
 	const state = getState();
-	const benchmark = state ? getBenchmark(appData.benchmarks, state.benchmarkId) : null;
+	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const summary = document.querySelector('[data-role="result-summary"]');
 	const leaderboard = document.querySelector('[data-role="leaderboard"]');
 	const review = document.querySelector('[data-role="review"]');

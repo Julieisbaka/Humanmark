@@ -24,7 +24,14 @@
 
                 <label class='field'>
                     <span>Questions</span>
-                    <select data-role='question-count' aria-label='Question count selection'></select>
+                    <input
+                        data-role='question-count'
+                        aria-label='Question count selection'
+                        type='number'
+                        min='1'
+                        step='1'
+                        inputmode='numeric'
+                    />
                 </label>
 
                 <button class='button' type='submit'>Start benchmark</button>
