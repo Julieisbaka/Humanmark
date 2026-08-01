@@ -18,8 +18,31 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  should-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      run_pages: ${{ steps.decision.outputs.run_pages }}
+    steps:
+      - name: Decide whether Pages should run
+        id: decision
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT_NAME" != "push" ]; then
+            echo "run_pages=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if grep -Fq '#Force-update-pages' "$GITHUB_EVENT_PATH"; then
+            echo "run_pages=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "run_pages=false" >> "$GITHUB_OUTPUT"
+
   build:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '#Force-update-pages')
+    if: needs.should-deploy.outputs.run_pages == 'true'
+    needs: should-deploy
     runs-on: ubuntu-latest
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -65,12 +88,14 @@ jobs:
           path: dist
 
   deploy:
-    if: github.event_name != 'push' || contains(github.event.head_commit.message, '#Force-update-pages')
+    if: needs.should-deploy.outputs.run_pages == 'true'
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
-    needs: build
+    needs:
+      - should-deploy
+      - build
     steps:
       - name: Deploy to GitHub Pages
         id: deployment
