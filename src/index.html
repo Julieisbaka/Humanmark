@@ -6,10 +6,36 @@
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <title>Humanmark</title>
     <link rel='stylesheet' href='style.css'>
+    <script type='module' src='script.js'></script>
 </head>
 
-<body>
+<body data-page='home'>
+    <main class='app-shell'>
+        <section class='panel'>
+            <div class='panel-heading'>
+                <h2>Start a benchmark</h2>
+                <p>Choose a benchmark and how many questions you want to answer.</p>
+            </div>
+            <form class='stack' data-role='benchmark-form'>
+                <label class='field'>
+                    <span>Benchmark</span>
+                    <select data-role='benchmark-select' aria-label='Benchmark selection'></select>
+                </label>
 
+                <label class='field'>
+                    <span>Questions</span>
+                    <select data-role='question-count' aria-label='Question count selection'></select>
+                </label>
+
+                <button class='button' type='submit'>Start benchmark</button>
+            </form>
+        </section>
+
+        <section class='grid grid--two' aria-live='polite'>
+            <div data-role='benchmark-preview'></div>
+            <div data-role='scoreboard'></div>
+        </section>
+    </main>
 </body>
 
 </html>

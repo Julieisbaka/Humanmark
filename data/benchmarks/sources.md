@@ -2,7 +2,14 @@
 
 Idavidrein/gpqa, gpqa_diamond
 
+Each benchmark lives in its own JSON file under `data/benchmarks/`.
+
+Parsed output keeps only the question prompt, answer choices, correct answer index, and explanation fields needed by the client.
+
 ## 10 options
 
 TIGER-Lab/MMLU-Pro
-MMMU/MMMU_Pro, standard (10 options)
+
+Each benchmark lives in its own JSON file under `data/benchmarks/`.
+
+Parsed output keeps only the question prompt, answer choices, correct answer index, and explanation fields needed by the client.

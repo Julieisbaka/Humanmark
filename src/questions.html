@@ -6,10 +6,23 @@
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <title>Questions</title>
     <link rel='stylesheet' href='style.css'>
+    <script type='module' src='script.js'></script>
 </head>
 
-<body>
+<body data-page='questions'>
+    <main class='app-shell'>
+        <header class='page-header'>
+            <a class='back-link' href='index.html'>← Choose a different benchmark</a>
+            <div>
+                <p class='eyebrow'>Answer time</p>
+                <h1 data-role='questions-status'>Loading benchmark…</h1>
+            </div>
+        </header>
 
+        <section class='panel'>
+            <div data-role='questions-shell' class='stack'></div>
+        </section>
+    </main>
 </body>
 
 </html>

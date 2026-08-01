@@ -1,0 +1,45 @@
+name: Refresh benchmark data
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '0 12 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  parse-benchmarks:
+    runs-on: ubuntu-latest
+
+    env:
+      HF_TOKEN: ${{ secrets.HF_TOKEN }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install benchmark tooling
+        run: python -m pip install --upgrade pip && pip install -r dev-requirements.txt
+
+      - name: Parse GPQA Diamond
+        run: >
+          python scripts/benchmark.py Idavidrein/gpqa
+          --task gpqa_diamond
+          --split train
+          --output data/benchmarks/generated/gpqa_diamond.json
+
+      - name: Parse MMLU-Pro
+        run: >
+          python scripts/benchmark.py TIGER-Lab/MMLU-Pro
+          --split test
+          --output data/benchmarks/generated/mmlu_pro.json
+
+      - name: Build benchmark index
+        run: python scripts/build_benchmark_index.py
+

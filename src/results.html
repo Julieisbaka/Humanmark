@@ -6,10 +6,20 @@
     <meta name='viewport' content='width=device-width, initial-scale=1'>
     <title>Results</title>
     <link rel='stylesheet' href='style.css'>
+    <script type='module' src='script.js'></script>
 </head>
 
-<body>
+<body data-page='results'>
+    <main class='app-shell'>
+        <header class='page-header'>
+            <a class='back-link' href='index.html'>← Run another benchmark</a>
+            <div data-role='results-meta'></div>
+        </header>
 
+        <section data-role='result-summary'></section>
+        <section data-role='leaderboard'></section>
+        <section data-role='review'></section>
+    </main>
 </body>
 
 </html>
