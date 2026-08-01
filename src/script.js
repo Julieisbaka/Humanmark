@@ -204,6 +204,21 @@ function renderMarkdown(value) {
 		.join('');
 }
 
+function renderMathIn(element) {
+	if (!element || typeof window.renderMathInElement !== 'function') {
+		return;
+	}
+
+	window.renderMathInElement(element, {
+		delimiters: [
+			{ left: '$$', right: '$$', display: true },
+			{ left: '$', right: '$', display: false },
+		],
+		throwOnError: false,
+		strict: 'ignore',
+	});
+}
+
 function renderSettings() {
 	const form = document.querySelector('[data-role="settings-form"]');
 	const questionsPerPageInput = document.querySelector('[data-role="setting-questions-per-page"]');
@@ -366,6 +381,8 @@ function renderHome(appData) {
 				<p>Comparisons use the current score snapshot from JSON.</p>
 			</article>
 		`;
+
+		renderMathIn(preview);
 	};
 
 	benchmarkIndex.forEach((benchmark) => {
@@ -547,6 +564,8 @@ async function renderQuestions(appData) {
 
 			window.location.href = 'results.html';
 		});
+
+		renderMathIn(container);
 	};
 
 	renderPage();
@@ -674,4 +693,6 @@ async function renderResults(appData) {
 			</div>
 		</article>
 	`;
+
+	renderMathIn(review);
 }
