@@ -2,9 +2,9 @@
 
 Idavidrein/gpqa, gpqa_diamond
 
-allenai/ai2_arc, ARC-Challenge
+cais/hle
 
-cais/mmlu, all
+CohereLabs/Global-MMLU-Lite, en
 
 Each benchmark lives in its own JSON file under `data/benchmarks/`.
 

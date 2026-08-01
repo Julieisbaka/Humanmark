@@ -31,6 +31,9 @@ ANSWER_KEYS = (
 )
 EXPLANATION_KEYS = ("explanation", "rationale", "solution", "analysis")
 ID_KEYS = ("id", "uid", "sample_id", "example_id")
+QUESTION_PROBABILITY_KEYS = ("question_probability", "question_prob", "px", "p_x")
+JOINT_PROBABILITY_KEYS = ("joint_probabilities", "joint_probability", "pxy", "p_xy", "cooccurrence_probabilities")
+CHOICE_PROBABILITY_KEYS = ("choice_probabilities", "choice_probability", "py", "p_y")
 
 
 def _normalize_key(key: str) -> str:
@@ -124,6 +127,63 @@ def _normalize_choices(raw_choices: Any) -> list[str]:
     return [str(raw_choices)]
 
 
+def _option_choices(record: dict[str, Any]) -> list[str]:
+    choices: list[str] = []
+    for letter in "abcdefghijklmnopqrstuvwxyz":
+        value = _get_value(record, f"option_{letter}")
+        if value in (None, ""):
+            break
+        choices.append(str(value))
+
+    return choices
+
+
+def _normalize_number_list(value: Any) -> list[float] | None:
+    if not isinstance(value, (list, tuple)):
+        return None
+
+    numbers: list[float] = []
+    for item in value:
+        try:
+            number = float(item)
+        except (TypeError, ValueError):
+            return None
+        if number <= 0:
+            return None
+        numbers.append(number)
+
+    return numbers if numbers else None
+
+
+def _extract_pmi(record: dict[str, Any], choice_count: int) -> dict[str, Any] | None:
+    raw_question_probability = _first_value(record, QUESTION_PROBABILITY_KEYS)
+    raw_joint_probabilities = _first_value(record, JOINT_PROBABILITY_KEYS)
+    raw_choice_probabilities = _first_value(record, CHOICE_PROBABILITY_KEYS)
+
+    try:
+        question_probability = float(raw_question_probability)
+    except (TypeError, ValueError):
+        return None
+
+    if question_probability <= 0:
+        return None
+
+    joint_probabilities = _normalize_number_list(raw_joint_probabilities)
+    choice_probabilities = _normalize_number_list(raw_choice_probabilities)
+
+    if not joint_probabilities or not choice_probabilities:
+        return None
+
+    if len(joint_probabilities) != choice_count or len(choice_probabilities) != choice_count:
+        return None
+
+    return {
+        "questionProbability": question_probability,
+        "jointProbabilities": joint_probabilities,
+        "choiceProbabilities": choice_probabilities,
+    }
+
+
 def _answer_index(raw_answer: Any, choices: list[str]) -> int:
     if isinstance(raw_answer, bool):
         return int(raw_answer)
@@ -188,6 +248,8 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
         raw_choices = _first_value(example, CHOICE_KEYS)
         choices = _normalize_choices(raw_choices)
         if not choices:
+            choices = _option_choices(example)
+        if not choices:
             choices = _fallback_choices(example, raw_answer)
 
         if not choices:
@@ -203,6 +265,7 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
 
         explanation = _first_value(example, EXPLANATION_KEYS)
         example_id = _first_value(example, ID_KEYS) or f"question-{index + 1}"
+        pmi = _extract_pmi(example, len(choices))
 
         parsed.append(
             {
@@ -211,6 +274,7 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
                 "choices": choices,
                 "answerIndex": answer_index,
                 **({"explanation": str(explanation).strip()} if explanation is not None else {}),
+                **({"pmi": pmi} if pmi is not None else {}),
             }
         )
 

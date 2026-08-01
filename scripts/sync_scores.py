@@ -13,7 +13,7 @@ import argparse
 import json
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
@@ -62,7 +62,7 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             benchmark_models: list[dict[str, Any]] = []
 
             for model in models:
-                evaluations = model.get("evaluations") or {}
+                evaluations = cast(dict[str, Any], model.get("evaluations") or {})
                 score = _extract_score(evaluations, evaluation_keys)
 
                 if score is None:
@@ -94,8 +94,8 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             "methodologyUrl": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
             "benchmarks": {
                 "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
-                "arc_challenge": build_benchmark("arc_challenge", "ARC Challenge", ["arc_challenge", "arc", "ai2_arc"]),
-                "mmlu_standard": build_benchmark("mmlu_standard", "MMLU (Standard)", ["mmlu", "mmlu_standard"]),
+                "humanitys_last_exam": build_benchmark("humanitys_last_exam", "Humanity's Last Exam", ["humanitys_last_exam", "hle", "cais_hle"]),
+                "global_mmlu_lite": build_benchmark("global_mmlu_lite", "Global-MMLU-Lite", ["global_mmlu_lite", "global-mmlu-lite", "gmmlu_lite"]),
                 "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),
             },
         }

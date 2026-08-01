@@ -36,19 +36,18 @@ jobs:
           --split train
           --output data/benchmarks/generated/gpqa_diamond.json
 
-      - name: Parse ARC Challenge
+      - name: Parse Humanity's Last Exam
         run: >
-          python scripts/benchmark.py allenai/ai2_arc
-          --task ARC-Challenge
+          python scripts/benchmark.py cais/hle
           --split test
-          --output data/benchmarks/generated/arc_challenge.json
+          --output data/benchmarks/generated/humanitys_last_exam.json
 
-      - name: Parse MMLU (Standard)
+      - name: Parse Global-MMLU-Lite
         run: >
-          python scripts/benchmark.py cais/mmlu
-          --task all
+          python scripts/benchmark.py CohereLabs/Global-MMLU-Lite
+          --task en
           --split test
-          --output data/benchmarks/generated/mmlu_standard.json
+          --output data/benchmarks/generated/global_mmlu_lite.json
 
       - name: Parse MMLU-Pro
         run: >

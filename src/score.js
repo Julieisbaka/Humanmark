@@ -79,30 +79,145 @@ export function formatDate(value) {
 	});
 }
 
+function mean(values) {
+	if (!values.length) {
+		return 0;
+	}
+
+	return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function readNumber(value) {
+	const parsed = Number(value);
+	return Number.isFinite(parsed) ? parsed : null;
+}
+
+function getArcPmiInputs(question) {
+	const pmi = question?.pmi ?? {};
+	const questionProbability =
+		readNumber(pmi.questionProbability) ??
+		readNumber(pmi.px) ??
+		readNumber(question?.questionProbability) ??
+		readNumber(question?.px);
+	const jointProbabilities =
+		pmi.jointProbabilities ??
+		pmi.pxy ??
+		question?.jointProbabilities ??
+		question?.pxy ??
+		[];
+	const choiceProbabilities =
+		pmi.choiceProbabilities ??
+		pmi.py ??
+		question?.choiceProbabilities ??
+		question?.py ??
+		[];
+
+	if (!questionProbability || questionProbability <= 0) {
+		return null;
+	}
+
+	if (!Array.isArray(jointProbabilities) || !Array.isArray(choiceProbabilities)) {
+		return null;
+	}
+
+	if (
+		jointProbabilities.length !== choiceProbabilities.length ||
+		jointProbabilities.length !== (question?.choices?.length ?? 0)
+	) {
+		return null;
+	}
+
+	return {
+		questionProbability,
+		jointProbabilities,
+		choiceProbabilities,
+	};
+}
+
+function scoreArcPmiQuestion(question, selectedIndex) {
+	if (!Number.isInteger(selectedIndex)) {
+		return null;
+	}
+
+	const inputs = getArcPmiInputs(question);
+	if (!inputs) {
+		return null;
+	}
+
+	const pmiValues = inputs.jointProbabilities.map((joint, index) => {
+		const jointProbability = readNumber(joint);
+		const choiceProbability = readNumber(inputs.choiceProbabilities[index]);
+
+		if (!jointProbability || !choiceProbability || jointProbability <= 0 || choiceProbability <= 0) {
+			return null;
+		}
+
+		return Math.log(jointProbability / (inputs.questionProbability * choiceProbability));
+	});
+
+	if (pmiValues.some((value) => value === null)) {
+		return null;
+	}
+
+	const selected = pmiValues[selectedIndex];
+	if (selected === null || selected === undefined) {
+		return null;
+	}
+
+	const min = Math.min(...pmiValues);
+	const max = Math.max(...pmiValues);
+
+	if (max === min) {
+		return 1;
+	}
+
+	return clamp((selected - min) / (max - min), 0, 1);
+}
+
 export function scoreResponses(questions, answers) {
+	const methodScores = [];
+	let methodScoredQuestions = 0;
+
 	const reviewedQuestions = (questions ?? []).map((question) => {
 		const selected = answers?.[question.id];
+		const selectedIndex = selected === undefined ? null : Number(selected);
 		const correct = Number(selected) === Number(question.answerIndex);
+
+		let methodScore = correct ? 1 : 0;
+		if (question?.scoringMethod === 'arc_pmi') {
+			const arcScore = scoreArcPmiQuestion(question, selectedIndex);
+			if (arcScore !== null) {
+				methodScore = arcScore;
+				methodScoredQuestions += 1;
+			}
+		}
+
+		methodScores.push(methodScore);
 
 		return {
 			...question,
-			selectedIndex: selected === undefined ? null : Number(selected),
+			selectedIndex,
 			isCorrect: correct,
+			methodScore,
 		};
 	});
 
 	const totalQuestions = reviewedQuestions.length;
 	const correctCount = reviewedQuestions.filter((question) => question.isCorrect).length;
-	const accuracy = totalQuestions ? correctCount / totalQuestions : 0;
+	const correctnessAccuracy = totalQuestions ? correctCount / totalQuestions : 0;
+	const accuracy = totalQuestions ? mean(methodScores) : 0;
 	const margin = calculateMarginOfError(correctCount, totalQuestions);
 
 	return {
 		correctCount,
 		totalQuestions,
 		accuracy,
+		correctnessAccuracy,
+		comparisonScore: correctnessAccuracy,
+		methodScoredQuestions,
 		margin,
-		lowerBound: clamp(accuracy - margin, 0, 1),
-		upperBound: clamp(accuracy + margin, 0, 1),
+		lowerBound: clamp(correctnessAccuracy - margin, 0, 1),
+		upperBound: clamp(correctnessAccuracy + margin, 0, 1),
 		reviewedQuestions,
 	};
 }
@@ -110,13 +225,23 @@ export function scoreResponses(questions, answers) {
 export function scoreBenchmark(benchmark, questions, answers) {
 	const scoringMethod = benchmark?.scoring?.method ?? 'pass@1';
 
-	if (scoringMethod !== 'pass@1') {
+	if (!['pass@1', 'arc_pmi'].includes(scoringMethod)) {
 		throw new Error(`Unsupported scoring method: ${scoringMethod}`);
 	}
 
+	const scoredQuestions = (questions ?? []).map((question) => ({
+		...question,
+		scoringMethod,
+	}));
+	const scoreSummary = scoreResponses(scoredQuestions, answers);
+
+	const scoreLabel =
+		scoringMethod === 'arc_pmi' ? 'ARC PMI score (normalized, 0 to 1)' : 'Accuracy (pass@1)';
+
 	return {
-		...scoreResponses(questions, answers),
+		...scoreSummary,
 		method: scoringMethod,
+		scoreLabel,
 		benchmarkId: benchmark?.id ?? null,
 		benchmarkName: benchmark?.name ?? null,
 	};
@@ -127,9 +252,11 @@ export function getBenchmarkModels(snapshot, benchmarkId) {
 }
 
 export function compareAgainstModels(userSummary, models) {
+	const comparisonScore = userSummary.comparisonScore ?? userSummary.accuracy;
+
 	return [...models]
 		.map((model) => {
-			const userDelta = userSummary.accuracy - model.score;
+			const userDelta = comparisonScore - model.score;
 			const verdict =
 				userSummary.lowerBound > model.score
 					? 'above'
@@ -147,6 +274,8 @@ export function compareAgainstModels(userSummary, models) {
 }
 
 export function buildLeaderboard(userSummary, models) {
+	const comparisonScore = userSummary.comparisonScore ?? userSummary.accuracy;
+
 	const entries = [
 		...models.map((model) => ({
 			...model,
@@ -155,7 +284,7 @@ export function buildLeaderboard(userSummary, models) {
 		{
 			modelId: 'humanmark-user',
 			model: 'You',
-			score: userSummary.accuracy,
+			score: comparisonScore,
 			sampleSize: userSummary.totalQuestions,
 			rank: null,
 			isUser: true,

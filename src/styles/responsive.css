@@ -1,0 +1,38 @@
+@media (max-width: 900px) {
+	.grid--two,
+	.stats-grid {
+		grid-template-columns: 1fr;
+	}
+
+	.leaderboard-controls {
+		grid-template-columns: 1fr;
+	}
+
+	.page-header,
+	.panel-heading,
+	.panel--accent {
+		align-items: start;
+		flex-direction: column;
+	}
+}
+
+@media (max-width: 720px) {
+	.app-shell {
+		width: min(100% - 20px, 1120px);
+		padding-top: 20px;
+	}
+
+	.panel {
+		padding: 18px;
+		border-radius: 20px;
+	}
+
+	.actions-row {
+		flex-direction: column;
+	}
+
+	.button,
+	.button--ghost {
+		width: 100%;
+	}
+}
