@@ -36,6 +36,20 @@ jobs:
           --split train
           --output data/benchmarks/generated/gpqa_diamond.json
 
+      - name: Parse ARC Challenge
+        run: >
+          python scripts/benchmark.py allenai/ai2_arc
+          --task ARC-Challenge
+          --split test
+          --output data/benchmarks/generated/arc_challenge.json
+
+      - name: Parse MMLU (Standard)
+        run: >
+          python scripts/benchmark.py cais/mmlu
+          --task all
+          --split test
+          --output data/benchmarks/generated/mmlu_standard.json
+
       - name: Parse MMLU-Pro
         run: >
           python scripts/benchmark.py TIGER-Lab/MMLU-Pro

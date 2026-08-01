@@ -399,24 +399,20 @@ function summarizeToolPolicy(toolPolicy) {
 	}
 
 	const modelAllowed = Boolean(toolPolicy.modelToolsAllowed);
-	const humanAllowed = Boolean(toolPolicy.humanToolsAllowed);
-
 	const allowedTools = (toolPolicy.allowedTools ?? []).filter(Boolean);
 	const modelMessage = modelAllowed
 		? allowedTools.length
-			? `Model evaluations allowed tools: ${allowedTools.join(', ')}.`
-			: 'Model evaluations allowed external tools.'
-		: 'Model evaluations did not use external tools.';
+			? `Benchmark model runs allowed these tools: ${allowedTools.join(', ')}.`
+			: 'Benchmark model runs allowed external tools (not listed by name).'
+		: 'Benchmark model runs did not allow external tools.';
 
-	const humanMessage = humanAllowed
-		? 'Human participants may use tools.'
-		: 'Human participants should not use tools.';
+	const mirrorMessage = 'Try to match this same tool allowance when taking the benchmark for a fair comparison.';
 
 	if (!toolPolicy.notes) {
-		return `${modelMessage} ${humanMessage}`;
+		return `${modelMessage} ${mirrorMessage}`;
 	}
 
-	return `${modelMessage} ${humanMessage} ${toolPolicy.notes}`;
+	return `${modelMessage} ${mirrorMessage} ${toolPolicy.notes}`;
 }
 
 function renderHome(appData) {
@@ -598,7 +594,6 @@ async function renderQuestions(appData) {
 			<article class="panel panel--soft tool-policy-note">
 				<p class="eyebrow">Tool policy</p>
 				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
-				${benchmark.toolPolicy?.notes ? `<p>${benchmark.toolPolicy.notes}</p>` : ''}
 			</article>
 			<form class="stack" data-role="question-form">
 			${currentQuestions

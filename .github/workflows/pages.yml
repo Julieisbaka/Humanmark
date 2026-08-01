@@ -46,6 +46,8 @@ jobs:
         if: github.event_name == 'schedule' || (github.event_name == 'push' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
         run: |
           python scripts/benchmark.py Idavidrein/gpqa --task gpqa_diamond --split train --output data/benchmarks/generated/gpqa_diamond.json
+          python scripts/benchmark.py allenai/ai2_arc --task ARC-Challenge --split test --output data/benchmarks/generated/arc_challenge.json
+          python scripts/benchmark.py cais/mmlu --task all --split test --output data/benchmarks/generated/mmlu_standard.json
           python scripts/benchmark.py TIGER-Lab/MMLU-Pro --split test --output data/benchmarks/generated/mmlu_pro.json
           python scripts/build_benchmark_index.py
 

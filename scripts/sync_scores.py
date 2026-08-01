@@ -52,12 +52,18 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
     if isinstance(payload.get("data"), list):
         models = payload["data"]
 
-        def build_benchmark(benchmark_id: str, benchmark_name: str, evaluation_key: str) -> dict[str, Any]:
+        def _extract_score(evaluations: dict[str, Any], keys: list[str]) -> Any:
+            for key in keys:
+                if key in evaluations and evaluations.get(key) is not None:
+                    return evaluations[key]
+            return None
+
+        def build_benchmark(benchmark_id: str, benchmark_name: str, evaluation_keys: list[str]) -> dict[str, Any]:
             benchmark_models: list[dict[str, Any]] = []
 
             for model in models:
                 evaluations = model.get("evaluations") or {}
-                score = evaluations.get(evaluation_key)
+                score = _extract_score(evaluations, evaluation_keys)
 
                 if score is None:
                     continue
@@ -87,8 +93,10 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             "generatedAt": payload.get("generatedAt") or payload.get("timestamp") or "unknown",
             "methodologyUrl": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
             "benchmarks": {
-                "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", "gpqa"),
-                "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", "mmlu_pro"),
+                "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
+                "arc_challenge": build_benchmark("arc_challenge", "ARC Challenge", ["arc_challenge", "arc", "ai2_arc"]),
+                "mmlu_standard": build_benchmark("mmlu_standard", "MMLU (Standard)", ["mmlu", "mmlu_standard"]),
+                "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),
             },
         }
 
