@@ -150,6 +150,22 @@ select,
 	border: 1px solid transparent;
 }
 
+.field input[type='number'] {
+	min-height: 48px;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: rgba(12, 19, 36, 0.92);
+	color: var(--text);
+	padding: 0 14px;
+	appearance: textfield;
+}
+
+.field input[type='number']::-webkit-outer-spin-button,
+.field input[type='number']::-webkit-inner-spin-button {
+	-webkit-appearance: none;
+	margin: 0;
+}
+
 select {
 	background: rgba(12, 19, 36, 0.92);
 	border-color: var(--border);

@@ -12,12 +12,25 @@ import {
 	verdictLabel,
 } from './score.js';
 
-const DATA_ROOT = '../data';
+const DATA_ROOT_CANDIDATES = ['data', './data', '../data'];
 
 const PAGE = document.body.dataset.page;
 
 document.addEventListener('DOMContentLoaded', () => {
-	void init();
+	void init().catch((error) => {
+		console.error(error);
+
+		if (PAGE === 'home') {
+			const preview = document.querySelector('[data-role="benchmark-preview"]');
+			const scoreboard = document.querySelector('[data-role="scoreboard"]');
+			if (preview) {
+				preview.innerHTML = '<article class="panel panel--soft"><p>Unable to load benchmark data right now.</p></article>';
+			}
+			if (scoreboard) {
+				scoreboard.innerHTML = '<article class="panel panel--soft"><p>Please try refreshing in a moment.</p></article>';
+			}
+		}
+	});
 });
 
 async function loadJSON(relativePath) {
@@ -30,13 +43,29 @@ async function loadJSON(relativePath) {
 	return response.json();
 }
 
+async function resolveDataRoot() {
+	for (const candidate of DATA_ROOT_CANDIDATES) {
+		try {
+			const benchmarksData = await loadJSON(`${candidate}/benchmarks/index.json`);
+			return {
+				dataRoot: candidate,
+				benchmarksData,
+			};
+		} catch {
+			// Try next candidate.
+		}
+	}
+
+	throw new Error('Failed to resolve benchmark data path.');
+}
+
 async function init() {
-	const [benchmarksData, currentScores] = await Promise.all([
-		loadJSON(`${DATA_ROOT}/benchmarks/index.json`),
-		loadJSON(`${DATA_ROOT}/scores/current.json`),
-	]);
+	const { dataRoot, benchmarksData } = await resolveDataRoot();
+
+	const currentScores = await loadJSON(`${dataRoot}/scores/current.json`).catch(() => ({ benchmarks: {} }));
 
 	const appData = {
+		dataRoot,
 		benchmarksData,
 		currentScores,
 		benchmarkIndex: benchmarksData.benchmarks ?? [],
@@ -73,7 +102,7 @@ async function loadBenchmarkDetails(appData, benchmarkId) {
 	}
 
 	try {
-		const benchmarkData = await loadJSON(`${DATA_ROOT}/benchmarks/${benchmarkMeta.file}`);
+		const benchmarkData = await loadJSON(`${appData.dataRoot}/benchmarks/${benchmarkMeta.file}`);
 		return {
 			...benchmarkMeta,
 			...benchmarkData,
