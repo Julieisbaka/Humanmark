@@ -5,6 +5,149 @@ const DEFAULT_QUESTIONS_PER_PAGE = 5;
 const MIN_QUESTIONS_PER_PAGE = 1;
 const MAX_QUESTIONS_PER_PAGE = 20;
 const DEFAULT_SORT_NUMERIC_CHOICES = true;
+const CURRENCY_PREFIXES = new Set(['$', '€', '£', '¥', '₹', '₩', '₽', '₺', '₫', '₱', '₪', 'usd', 'eur', 'gbp', 'jpy', 'aud', 'cad', 'cny', 'inr']);
+const SCALE_WORDS = new Map([
+	['k', 1_000],
+	['thousand', 1_000],
+	['m', 1_000_000],
+	['million', 1_000_000],
+	['b', 1_000_000_000],
+	['bn', 1_000_000_000],
+	['billion', 1_000_000_000],
+	['t', 1_000_000_000_000],
+	['tn', 1_000_000_000_000],
+	['trillion', 1_000_000_000_000],
+]);
+const MEASUREMENT_UNITS = new Map([
+	['mm', { dimension: 'length', factor: 0.001 }],
+	['millimeter', { dimension: 'length', factor: 0.001 }],
+	['millimeters', { dimension: 'length', factor: 0.001 }],
+	['cm', { dimension: 'length', factor: 0.01 }],
+	['centimeter', { dimension: 'length', factor: 0.01 }],
+	['centimeters', { dimension: 'length', factor: 0.01 }],
+	['m', { dimension: 'length', factor: 1 }],
+	['meter', { dimension: 'length', factor: 1 }],
+	['meters', { dimension: 'length', factor: 1 }],
+	['km', { dimension: 'length', factor: 1_000 }],
+	['kilometer', { dimension: 'length', factor: 1_000 }],
+	['kilometers', { dimension: 'length', factor: 1_000 }],
+	['in', { dimension: 'length', factor: 0.0254 }],
+	['inch', { dimension: 'length', factor: 0.0254 }],
+	['inches', { dimension: 'length', factor: 0.0254 }],
+	['ft', { dimension: 'length', factor: 0.3048 }],
+	['foot', { dimension: 'length', factor: 0.3048 }],
+	['feet', { dimension: 'length', factor: 0.3048 }],
+	['yd', { dimension: 'length', factor: 0.9144 }],
+	['yard', { dimension: 'length', factor: 0.9144 }],
+	['yards', { dimension: 'length', factor: 0.9144 }],
+	['mi', { dimension: 'length', factor: 1609.344 }],
+	['mile', { dimension: 'length', factor: 1609.344 }],
+	['miles', { dimension: 'length', factor: 1609.344 }],
+	['mg', { dimension: 'mass', factor: 0.001 }],
+	['milligram', { dimension: 'mass', factor: 0.001 }],
+	['milligrams', { dimension: 'mass', factor: 0.001 }],
+	['g', { dimension: 'mass', factor: 1 }],
+	['gram', { dimension: 'mass', factor: 1 }],
+	['grams', { dimension: 'mass', factor: 1 }],
+	['kg', { dimension: 'mass', factor: 1_000 }],
+	['kilogram', { dimension: 'mass', factor: 1_000 }],
+	['kilograms', { dimension: 'mass', factor: 1_000 }],
+	['lb', { dimension: 'mass', factor: 453.59237 }],
+	['lbs', { dimension: 'mass', factor: 453.59237 }],
+	['pound', { dimension: 'mass', factor: 453.59237 }],
+	['pounds', { dimension: 'mass', factor: 453.59237 }],
+	['oz', { dimension: 'mass', factor: 28.349523125 }],
+	['ounce', { dimension: 'mass', factor: 28.349523125 }],
+	['ounces', { dimension: 'mass', factor: 28.349523125 }],
+	['ml', { dimension: 'volume', factor: 0.001 }],
+	['milliliter', { dimension: 'volume', factor: 0.001 }],
+	['milliliters', { dimension: 'volume', factor: 0.001 }],
+	['l', { dimension: 'volume', factor: 1 }],
+	['liter', { dimension: 'volume', factor: 1 }],
+	['liters', { dimension: 'volume', factor: 1 }],
+	['s', { dimension: 'time', factor: 1 }],
+	['sec', { dimension: 'time', factor: 1 }],
+	['secs', { dimension: 'time', factor: 1 }],
+	['second', { dimension: 'time', factor: 1 }],
+	['seconds', { dimension: 'time', factor: 1 }],
+	['min', { dimension: 'time', factor: 60 }],
+	['mins', { dimension: 'time', factor: 60 }],
+	['minute', { dimension: 'time', factor: 60 }],
+	['minutes', { dimension: 'time', factor: 60 }],
+	['h', { dimension: 'time', factor: 3600 }],
+	['hr', { dimension: 'time', factor: 3600 }],
+	['hrs', { dimension: 'time', factor: 3600 }],
+	['hour', { dimension: 'time', factor: 3600 }],
+	['hours', { dimension: 'time', factor: 3600 }],
+]);
+
+function normalizeMathText(value) {
+	const text = String(value);
+	let result = '';
+
+	for (let index = 0; index < text.length; index += 1) {
+		const character = text[index];
+
+		if (character !== '$') {
+			result += character;
+			continue;
+		}
+
+		if (text[index + 1] === '$') {
+			result += '$$';
+			index += 1;
+			continue;
+		}
+
+		const nextNonSpace = text.slice(index + 1).match(/^\s*([^\s])/);
+		if (nextNonSpace && /\d/.test(nextNonSpace[1])) {
+			result += '$';
+			continue;
+		}
+
+		let closingIndex = index + 1;
+		while (closingIndex < text.length) {
+			if (text[closingIndex] === '$' && text[closingIndex - 1] !== '\\') {
+				break;
+			}
+			closingIndex += 1;
+		}
+
+		if (closingIndex >= text.length) {
+			result += '$';
+			continue;
+		}
+
+		const inner = text.slice(index + 1, closingIndex);
+		const trimmedInner = inner.trim();
+		const looksNumeric = /^[-+]?\d[\d,]*(?:\.\d+)?$/.test(trimmedInner) || /^[-+]?\d[\d,]*(?:\.\d+)?\s*(?:%|[a-zA-Zµμ°]+)$/.test(trimmedInner);
+
+		if (!trimmedInner || looksNumeric) {
+			result += '$';
+			continue;
+		}
+
+		result += `\\(${inner}\\)`;
+		index = closingIndex;
+	}
+
+	return result;
+}
+
+function shieldMathSegments(value) {
+	const tokens = [];
+	const protectedText = String(value).replace(/(\$\$[\s\S]+?\$\$|\\\([\s\S]+?\\\)|\\\[[\s\S]+?\\\])/g, (match) => {
+		const token = `__HUMANMARK_MATH_${tokens.length}__`;
+		tokens.push({ token, match });
+		return token;
+	});
+
+	return { protectedText, tokens };
+}
+
+function restoreMathSegments(value, tokens) {
+	return tokens.reduce((output, { token, match }) => output.replaceAll(token, match), value);
+}
 
 export async function loadJSON(relativePath) {
 	const response = await fetch(new URL(relativePath, window.location.href));
@@ -86,7 +229,7 @@ function parseSortableChoiceValue(choice) {
 		return null;
 	}
 
-	const normalized = raw.replaceAll(',', '');
+	const normalized = raw.replaceAll(',', '').replace(/\s+/g, ' ');
 	const numberPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?$/i;
 	const percentPattern = /^[-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?%$/i;
 
@@ -96,6 +239,38 @@ function parseSortableChoiceValue(choice) {
 
 	if (numberPattern.test(normalized)) {
 		return Number.parseFloat(normalized);
+	}
+
+	const quantityMatch = normalized.match(/^([€£¥₹₩₽₺₫₱₪$]|USD|EUR|GBP|JPY|AUD|CAD|CNY|INR)?\s*([-+]?(?:\d+\.?\d*|\.\d+)(?:e[-+]?\d+)?)([a-zA-Zµμ°%]{0,10})?(?:\s+([a-zA-Z]{1,16}))?$/i);
+	if (quantityMatch) {
+		const prefix = (quantityMatch[1] ?? '').toLowerCase();
+		const numericValue = Number.parseFloat(quantityMatch[2]);
+		const attachedSuffix = (quantityMatch[3] ?? '').toLowerCase();
+		const separatedSuffix = (quantityMatch[4] ?? '').toLowerCase();
+		const suffix = attachedSuffix || separatedSuffix;
+
+		if (Number.isFinite(numericValue)) {
+			const measurement = MEASUREMENT_UNITS.get(suffix);
+			if (measurement) {
+				return numericValue * measurement.factor;
+			}
+
+			if (CURRENCY_PREFIXES.has(prefix) || CURRENCY_PREFIXES.has(prefix.toLowerCase())) {
+				const scale = SCALE_WORDS.get(suffix);
+				if (scale) {
+					return numericValue * scale;
+				}
+			}
+
+			const scale = SCALE_WORDS.get(suffix);
+			if (scale) {
+				return numericValue * scale;
+			}
+
+			if (!prefix && !suffix) {
+				return numericValue;
+			}
+		}
 	}
 
 	return null;
@@ -180,9 +355,10 @@ function injectInlineLambdaDelimiters(value) {
 }
 
 export function renderInlineMarkdown(value) {
-	const escaped = escapeHtml(injectInlineLambdaDelimiters(value));
-
-	return escaped
+	const normalized = normalizeMathText(injectInlineLambdaDelimiters(value));
+	const { protectedText, tokens } = shieldMathSegments(normalized);
+	const escaped = escapeHtml(protectedText);
+	const rendered = escaped
 		.replace(/`([^`]+)`/g, '<code>$1</code>')
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 		.replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -190,6 +366,8 @@ export function renderInlineMarkdown(value) {
 			const safeHref = escapeAttribute(sanitizeHref(href));
 			return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 		});
+
+	return restoreMathSegments(rendered, tokens);
 }
 
 export function renderMarkdown(value) {
@@ -228,7 +406,6 @@ export function renderMathIn(element) {
 	window.renderMathInElement(element, {
 		delimiters: [
 			{ left: '$$', right: '$$', display: true },
-			{ left: '$', right: '$', display: false },
 			{ left: '\\[', right: '\\]', display: true },
 			{ left: '\\(', right: '\\)', display: false },
 		],

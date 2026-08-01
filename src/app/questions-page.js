@@ -3,6 +3,27 @@ import { escapeAttribute, loadBenchmarkDetails, loadSettings, renderInlineMarkdo
 import { getModels, getState } from './runtime.js';
 import { saveState } from '../score.js';
 
+function normalizeCrossedOutChoices(value) {
+	if (!value || typeof value !== 'object') {
+		return {};
+	}
+
+	const normalized = {};
+
+	for (const [questionId, crossedChoices] of Object.entries(value)) {
+		const uniqueChoices = [...new Set((Array.isArray(crossedChoices) ? crossedChoices : [])
+			.map((choice) => Number(choice))
+			.filter((choice) => Number.isInteger(choice) && choice >= 0))]
+			.sort((left, right) => left - right);
+
+		if (uniqueChoices.length) {
+			normalized[questionId] = uniqueChoices;
+		}
+	}
+
+	return normalized;
+}
+
 export async function renderQuestions(appData) {
 	const state = getState();
 	const settings = loadSettings();
@@ -11,6 +32,7 @@ export async function renderQuestions(appData) {
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const container = document.querySelector('[data-role="questions-shell"]');
 	const status = document.querySelector('[data-role="questions-status"]');
+	let draftCrossedOutChoices = normalizeCrossedOutChoices(state?.crossedOutChoices);
 
 	if (!state || !benchmark || !container || !status) {
 		window.location.href = 'index.html';
@@ -51,31 +73,51 @@ export async function renderQuestions(appData) {
 			<form class="stack" data-role="question-form">
 			${currentQuestions
 				.map(
-					(question, index) => `
-						<fieldset class="question-card">
-							<legend>
-								<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
-								<div class="question-prompt markdown-content">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
-							</legend>
-							<div class="choice-list">
-								${question.choices
-									.map(
-										(choice, choiceIndex) => `
-											<label class="choice-item">
-												<input
-													type="radio"
-													name="${escapeAttribute(question.id)}"
-													value="${choiceIndex}"
-													${draftAnswers?.[question.id] === choiceIndex ? 'checked' : ''}
-												/>
-												<span>${renderInlineMarkdown(choice)}</span>
-											</label>
-										`,
+					(question, index) => {
+						const crossedOut = new Set(draftCrossedOutChoices[question.id] ?? []);
+
+						return `
+							<fieldset class="question-card">
+								<legend>
+									<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
+									<div class="question-prompt markdown-content">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
+								</legend>
+								<div class="choice-list">
+									${question.choices
+										.map(
+											(choice, choiceIndex) => {
+												const isCrossedOut = crossedOut.has(choiceIndex);
+
+												return `
+													<div class="choice-item ${isCrossedOut ? 'choice-item--crossed' : ''}">
+														<label class="choice-select">
+															<input
+																type="radio"
+																name="${escapeAttribute(question.id)}"
+																value="${choiceIndex}"
+																${draftAnswers?.[question.id] === choiceIndex ? 'checked' : ''}
+															/>
+															<span class="choice-text">${renderInlineMarkdown(choice)}</span>
+														</label>
+														<button
+															type="button"
+															class="choice-crossout-button"
+															data-role="choice-crossout-toggle"
+															data-question-id="${escapeAttribute(question.id)}"
+															data-choice-index="${choiceIndex}"
+															aria-pressed="${isCrossedOut ? 'true' : 'false'}"
+														>
+															${isCrossedOut ? 'Restore' : 'Cross out'}
+														</button>
+													</div>
+											`;
+										},
 									)
 									.join('')}
-							</div>
-						</fieldset>
-					`,
+								</div>
+							</fieldset>
+						`;
+					},
 				)
 				.join('')}
 			<div class="actions-row questions-actions-row">
@@ -91,6 +133,42 @@ export async function renderQuestions(appData) {
 		const form = container.querySelector('[data-role="question-form"]');
 		const prevButton = container.querySelector('[data-role="prev-page"]');
 		const nextButton = container.querySelector('[data-role="next-page"]');
+		const crossoutButtons = container.querySelectorAll('[data-role="choice-crossout-toggle"]');
+
+		crossoutButtons.forEach((button) => {
+			button.addEventListener('click', () => {
+				collectCurrentPageResponses();
+				const questionId = button.dataset.questionId;
+				const choiceIndex = Number(button.dataset.choiceIndex);
+
+				if (!questionId || !Number.isInteger(choiceIndex)) {
+					return;
+				}
+
+				const existing = new Set(draftCrossedOutChoices[questionId] ?? []);
+				if (existing.has(choiceIndex)) {
+					existing.delete(choiceIndex);
+				} else {
+					existing.add(choiceIndex);
+				}
+
+				const nextCrossedOutChoices = { ...draftCrossedOutChoices };
+				if (existing.size) {
+					nextCrossedOutChoices[questionId] = [...existing].sort((left, right) => left - right);
+				} else {
+					delete nextCrossedOutChoices[questionId];
+				}
+
+				draftCrossedOutChoices = nextCrossedOutChoices;
+				saveState({
+					...state,
+					answers: draftAnswers,
+					crossedOutChoices: draftCrossedOutChoices,
+					currentQuestionPage: currentPage,
+				});
+				renderPage();
+			});
+		});
 
 		prevButton?.addEventListener('click', () => {
 			collectCurrentPageResponses();
@@ -98,6 +176,7 @@ export async function renderQuestions(appData) {
 			saveState({
 				...state,
 				answers: draftAnswers,
+				crossedOutChoices: draftCrossedOutChoices,
 				currentQuestionPage: currentPage,
 			});
 			renderPage();
@@ -109,6 +188,7 @@ export async function renderQuestions(appData) {
 			saveState({
 				...state,
 				answers: draftAnswers,
+				crossedOutChoices: draftCrossedOutChoices,
 				currentQuestionPage: currentPage,
 			});
 			renderPage();
@@ -124,6 +204,7 @@ export async function renderQuestions(appData) {
 			saveState({
 				...state,
 				answers: draftAnswers,
+				crossedOutChoices: draftCrossedOutChoices,
 				currentQuestionPage: 1,
 				completedAt: new Date().toISOString(),
 				score,

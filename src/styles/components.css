@@ -149,12 +149,27 @@
 .choice-item {
 	display: flex;
 	align-items: flex-start;
-	gap: 10px;
+	justify-content: space-between;
+	gap: 12px;
 	padding: 10px 12px;
 	background: rgba(14, 22, 40, 0.28);
 	border: 1px solid rgba(157, 177, 255, 0.1);
 	border-radius: 12px;
 	transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.choice-select {
+	display: flex;
+	align-items: flex-start;
+	gap: 10px;
+	flex: 1;
+	min-width: 0;
+	cursor: pointer;
+}
+
+.choice-text {
+	min-width: 0;
+	flex: 1;
 }
 
 .choice-item input {
@@ -170,6 +185,44 @@
 .choice-item:has(input:checked) {
 	background: rgba(138, 180, 248, 0.1);
 	border-color: rgba(138, 180, 248, 0.24);
+}
+
+.choice-item--crossed {
+	opacity: 0.72;
+	background: rgba(14, 22, 40, 0.18);
+	border-color: rgba(239, 68, 68, 0.18);
+}
+
+.choice-item--crossed .choice-text {
+	text-decoration: line-through;
+	text-decoration-thickness: 2px;
+	text-decoration-color: rgba(239, 68, 68, 0.9);
+}
+
+.choice-crossout-button {
+	flex: 0 0 auto;
+	align-self: center;
+	padding: 7px 10px;
+	border-radius: 999px;
+	border: 1px solid rgba(157, 177, 255, 0.14);
+	background: rgba(7, 11, 24, 0.24);
+	color: var(--muted);
+	font-size: 0.82rem;
+	font-weight: 700;
+	cursor: pointer;
+	transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.choice-crossout-button:hover {
+	border-color: rgba(239, 68, 68, 0.34);
+	color: var(--text);
+	background: rgba(239, 68, 68, 0.1);
+}
+
+.choice-item--crossed .choice-crossout-button {
+	border-color: rgba(239, 68, 68, 0.34);
+	color: var(--danger);
+	background: rgba(239, 68, 68, 0.08);
 }
 
 .score-ring {
