@@ -19,9 +19,30 @@ from datasets import Dataset, DatasetDict, load_dataset
 
 QUESTION_KEYS = ("question", "prompt", "stem", "query", "input", "text")
 CHOICE_KEYS = ("choices", "options", "candidates", "answers")
-ANSWER_KEYS = ("answer", "label", "correct", "gold", "target")
+ANSWER_KEYS = (
+    "answer",
+    "label",
+    "correct",
+    "correct_answer",
+    "correctanswer",
+    "final_answer",
+    "gold",
+    "target",
+)
 EXPLANATION_KEYS = ("explanation", "rationale", "solution", "analysis")
 ID_KEYS = ("id", "uid", "sample_id", "example_id")
+
+
+def _normalize_key(key: str) -> str:
+    return "".join(character for character in key.casefold() if character.isalnum())
+
+
+def _get_value(record: dict[str, Any], key: str) -> Any:
+    normalized_target = _normalize_key(key)
+    for candidate_key, value in record.items():
+        if _normalize_key(str(candidate_key)) == normalized_target and value not in (None, ""):
+            return value
+    return None
 
 
 def load(dataset: str, task: str | None = None, split: str | None = None):
@@ -43,9 +64,35 @@ def load(dataset: str, task: str | None = None, split: str | None = None):
 
 def _first_value(record: dict[str, Any], keys: tuple[str, ...]) -> Any:
     for key in keys:
-        if key in record and record[key] not in (None, ""):
-            return record[key]
+        value = _get_value(record, key)
+        if value not in (None, ""):
+            return value
     return None
+
+
+def _fallback_choices(record: dict[str, Any], raw_answer: Any) -> list[str]:
+    incorrect_candidates = [
+        "incorrect_answer_1",
+        "incorrect_answer_2",
+        "incorrect_answer_3",
+        "incorrect_answer_4",
+        "distractor_1",
+        "distractor_2",
+        "distractor_3",
+        "distractor_4",
+    ]
+
+    incorrect = [
+        str(value)
+        for key in incorrect_candidates
+        for value in [_get_value(record, key)]
+        if value not in (None, "")
+    ]
+
+    if raw_answer not in (None, "") and incorrect:
+        return [str(raw_answer), *incorrect]
+
+    return []
 
 
 def _normalize_choices(raw_choices: Any) -> list[str]:
@@ -134,16 +181,25 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
         if prompt is None:
             continue
 
-        raw_choices = _first_value(example, CHOICE_KEYS)
-        choices = _normalize_choices(raw_choices)
-        if not choices:
-            continue
-
         raw_answer = _first_value(example, ANSWER_KEYS)
         if raw_answer is None:
             continue
 
-        answer_index = _answer_index(raw_answer, choices)
+        raw_choices = _first_value(example, CHOICE_KEYS)
+        choices = _normalize_choices(raw_choices)
+        if not choices:
+            choices = _fallback_choices(example, raw_answer)
+
+        if not choices:
+            continue
+
+        try:
+            answer_index = _answer_index(raw_answer, choices)
+        except ValueError:
+            continue
+
+        if answer_index < 0 or answer_index >= len(choices):
+            continue
 
         explanation = _first_value(example, EXPLANATION_KEYS)
         example_id = _first_value(example, ID_KEYS) or f"question-{index + 1}"

@@ -13,6 +13,10 @@ import {
 } from './score.js';
 
 const DATA_ROOT_CANDIDATES = ['data', './data', '../data'];
+const SETTINGS_KEY = 'humanmark-settings';
+const DEFAULT_QUESTIONS_PER_PAGE = 5;
+const MIN_QUESTIONS_PER_PAGE = 1;
+const MAX_QUESTIONS_PER_PAGE = 20;
 
 const PAGE = document.body.dataset.page;
 
@@ -60,6 +64,11 @@ async function resolveDataRoot() {
 }
 
 async function init() {
+	if (PAGE === 'settings') {
+		renderSettings();
+		return;
+	}
+
 	const { dataRoot, benchmarksData } = await resolveDataRoot();
 
 	const currentScores = await loadJSON(`${dataRoot}/scores/current.json`).catch(() => ({ benchmarks: {} }));
@@ -84,6 +93,142 @@ async function init() {
 	if (PAGE === 'results') {
 		void renderResults(appData);
 	}
+}
+
+function clampQuestionsPerPage(value) {
+	const parsed = Number(value);
+	if (!Number.isFinite(parsed)) {
+		return DEFAULT_QUESTIONS_PER_PAGE;
+	}
+
+	return Math.min(MAX_QUESTIONS_PER_PAGE, Math.max(MIN_QUESTIONS_PER_PAGE, Math.floor(parsed)));
+}
+
+function loadSettings() {
+	const fallback = { questionsPerPage: DEFAULT_QUESTIONS_PER_PAGE };
+	const raw = window.localStorage.getItem(SETTINGS_KEY);
+
+	if (!raw) {
+		return fallback;
+	}
+
+	try {
+		const parsed = JSON.parse(raw);
+		return {
+			questionsPerPage: clampQuestionsPerPage(parsed?.questionsPerPage),
+		};
+	} catch {
+		return fallback;
+	}
+}
+
+function saveSettings(settings) {
+	window.localStorage.setItem(
+		SETTINGS_KEY,
+		JSON.stringify({
+			questionsPerPage: clampQuestionsPerPage(settings?.questionsPerPage),
+		}),
+	);
+}
+
+function escapeHtml(value) {
+	return String(value)
+		.replaceAll('&', '&amp;')
+		.replaceAll('<', '&lt;')
+		.replaceAll('>', '&gt;')
+		.replaceAll('"', '&quot;')
+		.replaceAll("'", '&#39;');
+}
+
+function escapeAttribute(value) {
+	return escapeHtml(value).replaceAll('`', '&#96;');
+}
+
+function sanitizeHref(rawHref) {
+	const decoded = String(rawHref).replaceAll('&amp;', '&').trim();
+
+	if (!decoded) {
+		return '#';
+	}
+
+	try {
+		const resolved = new URL(decoded, window.location.origin);
+		if (["http:", "https:", "mailto:"].includes(resolved.protocol)) {
+			return decoded;
+		}
+	} catch {
+		return '#';
+	}
+
+	return '#';
+}
+
+function renderInlineMarkdown(value) {
+	const escaped = escapeHtml(value);
+
+	return escaped
+		.replace(/`([^`]+)`/g, '<code>$1</code>')
+		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+		.replace(/\*([^*]+)\*/g, '<em>$1</em>')
+		.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label, href) => {
+			const safeHref = escapeAttribute(sanitizeHref(href));
+			return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+		});
+}
+
+function renderMarkdown(value) {
+	if (value === null || value === undefined) {
+		return '';
+	}
+
+	const normalized = String(value).replace(/\r\n/g, '\n').trim();
+	if (!normalized) {
+		return '';
+	}
+
+	const blocks = normalized.split(/\n{2,}/);
+
+	return blocks
+		.map((block) => {
+			const lines = block.split('\n').map((line) => line.trimEnd());
+			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
+
+			if (isUnorderedList) {
+				return `<ul>${lines
+					.map((line) => `<li>${renderInlineMarkdown(line.replace(/^[-*]\s+/, ''))}</li>`)
+					.join('')}</ul>`;
+			}
+
+			return `<p>${lines.map((line) => renderInlineMarkdown(line)).join('<br>')}</p>`;
+		})
+		.join('');
+}
+
+function renderSettings() {
+	const form = document.querySelector('[data-role="settings-form"]');
+	const questionsPerPageInput = document.querySelector('[data-role="setting-questions-per-page"]');
+	const status = document.querySelector('[data-role="settings-status"]');
+
+	if (!form || !questionsPerPageInput) {
+		return;
+	}
+
+	const settings = loadSettings();
+	questionsPerPageInput.min = String(MIN_QUESTIONS_PER_PAGE);
+	questionsPerPageInput.max = String(MAX_QUESTIONS_PER_PAGE);
+	questionsPerPageInput.value = String(settings.questionsPerPage);
+
+	form.addEventListener('submit', (event) => {
+		event.preventDefault();
+
+		saveSettings({
+			questionsPerPage: questionsPerPageInput.value,
+		});
+
+		if (status) {
+			status.textContent = 'Settings saved.';
+		}
+	});
 }
 
 function getState() {
@@ -120,20 +265,63 @@ function getTopModel(models) {
 	return [...models].sort((left, right) => right.score - left.score)[0] ?? null;
 }
 
+function summarizeToolPolicy(toolPolicy) {
+	if (!toolPolicy) {
+		return 'Tool policy is not specified for this benchmark.';
+	}
+
+	const modelAllowed = Boolean(toolPolicy.modelToolsAllowed);
+	const humanAllowed = Boolean(toolPolicy.humanToolsAllowed);
+	const parityNote =
+		modelAllowed === humanAllowed
+			? 'Model and human tool rules are aligned.'
+			: 'Model and human tool rules are not aligned.';
+
+	if (!humanAllowed) {
+		return `${parityNote} No external tools are allowed for this benchmark.`;
+	}
+
+	const allowedTools = (toolPolicy.allowedTools ?? []).filter(Boolean);
+	if (!allowedTools.length) {
+		return `${parityNote} External tools are allowed.`;
+	}
+
+	return `${parityNote} Allowed tools: ${allowedTools.join(', ')}.`;
+}
+
 function renderHome(appData) {
 	const benchmarkSelect = document.querySelector('[data-role="benchmark-select"]');
 	const questionCountSelect = document.querySelector('[data-role="question-count"]');
 	const preview = document.querySelector('[data-role="benchmark-preview"]');
 	const scoreboard = document.querySelector('[data-role="scoreboard"]');
 	const form = document.querySelector('[data-role="benchmark-form"]');
+	const startButton = form.querySelector('button[type="submit"]');
 	const { benchmarkIndex, benchmarksData, currentScores } = appData;
 
 	const renderQuestionCounts = (benchmark) => {
-		const maxCount = Math.max(1, Math.min(benchmark.questionCount ?? benchmark.questions?.length ?? 1, 10));
+		const availableQuestions = Number(benchmark.questionCount ?? benchmark.questions?.length ?? 0);
+
+		if (availableQuestions <= 0) {
+			questionCountSelect.value = '0';
+			questionCountSelect.min = '0';
+			questionCountSelect.max = '0';
+			questionCountSelect.placeholder = 'No questions available';
+			questionCountSelect.disabled = true;
+			if (startButton) {
+				startButton.disabled = true;
+			}
+			return;
+		}
+
+		const maxCount = Math.min(availableQuestions, 10);
 		questionCountSelect.value = String(maxCount);
 		questionCountSelect.min = '1';
 		questionCountSelect.max = String(maxCount);
 		questionCountSelect.placeholder = `1-${maxCount}`;
+		questionCountSelect.disabled = false;
+		if (startButton) {
+			startButton.disabled = false;
+		}
 	};
 
 	const renderPreview = (benchmark) => {
@@ -145,6 +333,7 @@ function renderHome(appData) {
 				<p class="eyebrow">Selected benchmark</p>
 				<h2>${benchmark.name}</h2>
 				<p>${benchmark.description}</p>
+				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
 				<dl class="stats-grid">
 					<div>
 						<dt>Question pool</dt>
@@ -220,6 +409,7 @@ function renderHome(appData) {
 			questionCount,
 			questionIds: selectedQuestions.map((question) => question.id),
 			answers: {},
+			currentQuestionPage: 1,
 		});
 
 		window.location.href = 'questions.html';
@@ -230,6 +420,8 @@ function renderHome(appData) {
 
 async function renderQuestions(appData) {
 	const state = getState();
+	const settings = loadSettings();
+	const questionsPerPage = clampQuestionsPerPage(settings.questionsPerPage);
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const container = document.querySelector('[data-role="questions-shell"]');
 	const status = document.querySelector('[data-role="questions-status"]');
@@ -242,18 +434,43 @@ async function renderQuestions(appData) {
 	const selectedQuestions = benchmark.questions.filter((question) =>
 		state.questionIds.includes(question.id),
 	);
+	const totalPages = Math.max(1, Math.ceil(selectedQuestions.length / questionsPerPage));
+	let currentPage = Math.min(Math.max(Number(state.currentQuestionPage ?? 1), 1), totalPages);
+	let draftAnswers = { ...(state.answers ?? {}) };
 
-	status.textContent = `${benchmark.name} · ${selectedQuestions.length} question${selectedQuestions.length === 1 ? '' : 's'}`;
+	const pageWindow = () => {
+		const start = (currentPage - 1) * questionsPerPage;
+		const end = start + questionsPerPage;
+		return selectedQuestions.slice(start, end);
+	};
 
-	container.innerHTML = `
-		<form class="stack" data-role="question-form">
-			${selectedQuestions
+	const collectCurrentPageResponses = () => {
+		pageWindow().forEach((question) => {
+			const selected = container.querySelector(`input[name="${question.id}"]:checked`);
+			if (selected) {
+				draftAnswers[question.id] = Number(selected.value);
+			}
+		});
+	};
+
+	const renderPage = () => {
+		const currentQuestions = pageWindow();
+		status.textContent = `${benchmark.name} · ${selectedQuestions.length} question${selectedQuestions.length === 1 ? '' : 's'} · page ${currentPage}/${totalPages}`;
+
+		container.innerHTML = `
+			<article class="panel panel--soft tool-policy-note">
+				<p class="eyebrow">Tool policy</p>
+				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
+				${benchmark.toolPolicy?.notes ? `<p>${benchmark.toolPolicy.notes}</p>` : ''}
+			</article>
+			<form class="stack" data-role="question-form">
+			${currentQuestions
 				.map(
 					(question, index) => `
 						<fieldset class="question-card">
 							<legend>
-								<span class="question-number">Question ${index + 1}</span>
-								<span class="question-prompt">${question.prompt}</span>
+								<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
+								<div class="question-prompt markdown-content">${renderMarkdown(question.prompt)}</div>
 							</legend>
 							<div class="choice-list">
 								${question.choices
@@ -262,11 +479,11 @@ async function renderQuestions(appData) {
 											<label class="choice-item">
 												<input
 													type="radio"
-													name="${question.id}"
+													name="${escapeAttribute(question.id)}"
 													value="${choiceIndex}"
-													${state.answers?.[question.id] === choiceIndex ? 'checked' : ''}
+													${draftAnswers?.[question.id] === choiceIndex ? 'checked' : ''}
 												/>
-												<span>${choice}</span>
+												<span>${renderInlineMarkdown(choice)}</span>
 											</label>
 										`,
 									)
@@ -276,40 +493,63 @@ async function renderQuestions(appData) {
 					`,
 				)
 				.join('')}
-			<div class="actions-row">
+			<div class="actions-row questions-actions-row">
 				<a class="button button--ghost" href="index.html">Choose a different benchmark</a>
-				<button class="button" type="submit">Score my answers</button>
+				<div class="actions-row">
+					<button class="button button--ghost" type="button" data-role="prev-page" ${currentPage === 1 ? 'disabled' : ''}>Previous page</button>
+					${currentPage < totalPages ? '<button class="button" type="button" data-role="next-page">Next page</button>' : '<button class="button" type="submit">Score my answers</button>'}
+				</div>
 			</div>
 		</form>
-	`;
+		`;
 
-	const form = container.querySelector('[data-role="question-form"]');
+		const form = container.querySelector('[data-role="question-form"]');
+		const prevButton = container.querySelector('[data-role="prev-page"]');
+		const nextButton = container.querySelector('[data-role="next-page"]');
 
-	form.addEventListener('submit', (event) => {
-		event.preventDefault();
-
-		const responses = {};
-
-		selectedQuestions.forEach((question) => {
-			const selected = container.querySelector(`input[name="${question.id}"]:checked`);
-			if (selected) {
-				responses[question.id] = Number(selected.value);
-			}
+		prevButton?.addEventListener('click', () => {
+			collectCurrentPageResponses();
+			currentPage = Math.max(1, currentPage - 1);
+			saveState({
+				...state,
+				answers: draftAnswers,
+				currentQuestionPage: currentPage,
+			});
+			renderPage();
 		});
 
-		const score = scoreBenchmark(benchmark, selectedQuestions, responses);
-		const currentModels = getModels(benchmark.id, currentScores);
-
-		saveState({
-			...state,
-			answers: responses,
-			completedAt: new Date().toISOString(),
-			score,
-			currentModels,
+		nextButton?.addEventListener('click', () => {
+			collectCurrentPageResponses();
+			currentPage = Math.min(totalPages, currentPage + 1);
+			saveState({
+				...state,
+				answers: draftAnswers,
+				currentQuestionPage: currentPage,
+			});
+			renderPage();
 		});
 
-		window.location.href = 'results.html';
-	});
+		form.addEventListener('submit', (event) => {
+			event.preventDefault();
+			collectCurrentPageResponses();
+
+			const score = scoreBenchmark(benchmark, selectedQuestions, draftAnswers);
+			const currentModels = getModels(benchmark.id, appData.currentScores);
+
+			saveState({
+				...state,
+				answers: draftAnswers,
+				currentQuestionPage: 1,
+				completedAt: new Date().toISOString(),
+				score,
+				currentModels,
+			});
+
+			window.location.href = 'results.html';
+		});
+	};
+
+	renderPage();
 }
 
 async function renderResults(appData) {
@@ -414,19 +654,19 @@ async function renderResults(appData) {
 							<section class="review-item ${question.isCorrect ? 'review-item--correct' : 'review-item--wrong'}">
 								<div>
 									<p class="eyebrow">Question ${index + 1}</p>
-									<h3>${question.prompt}</h3>
+									<div class="markdown-content review-prompt">${renderMarkdown(question.prompt)}</div>
 								</div>
 								<dl class="stats-grid stats-grid--compact">
 									<div>
 										<dt>Your answer</dt>
-										<dd>${selected}</dd>
+										<dd>${renderInlineMarkdown(selected)}</dd>
 									</div>
 									<div>
 										<dt>Correct answer</dt>
-										<dd>${question.choices[question.answerIndex]}</dd>
+										<dd>${renderInlineMarkdown(question.choices[question.answerIndex])}</dd>
 									</div>
 								</dl>
-								<p>${question.explanation}</p>
+								<div class="markdown-content">${renderMarkdown(question.explanation)}</div>
 							</section>
 						`;
 					})

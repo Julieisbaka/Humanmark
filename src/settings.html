@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta charset='utf-8'>
+    <meta name='viewport' content='width=device-width, initial-scale=1'>
+    <title>Settings</title>
+    <link rel='stylesheet' href='style.css'>
+    <script type='module' src='script.js'></script>
+</head>
+
+<body data-page='settings'>
+    <main class='app-shell'>
+        <header class='page-header'>
+            <a class='back-link' href='index.html'>← Back to benchmarks</a>
+            <div>
+                <p class='eyebrow'>Preferences</p>
+                <h1>Settings</h1>
+            </div>
+        </header>
+
+        <section class='panel'>
+            <div class='panel-heading'>
+                <h2>Question display</h2>
+                <p>These settings are stored in your browser.</p>
+            </div>
+
+            <form class='stack' data-role='settings-form'>
+                <label class='field'>
+                    <span>Questions per page</span>
+                    <input
+                        data-role='setting-questions-per-page'
+                        type='number'
+                        min='1'
+                        max='20'
+                        step='1'
+                        inputmode='numeric'
+                    />
+                </label>
+
+                <div class='actions-row'>
+                    <button class='button' type='submit'>Save settings</button>
+                </div>
+
+                <p data-role='settings-status' aria-live='polite'></p>
+            </form>
+        </section>
+    </main>
+</body>
+
+</html>

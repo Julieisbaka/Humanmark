@@ -24,6 +24,12 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 4},
         "source": {"dataset": "Idavidrein/gpqa", "subset": "gpqa_diamond", "split": "train"},
         "tags": ["science", "reasoning", "4 options"],
+        "toolPolicy": {
+            "modelToolsAllowed": False,
+            "humanToolsAllowed": False,
+            "allowedTools": [],
+            "notes": "Tool rules should stay aligned between model and human attempts.",
+        },
         "generatedQuestionsFile": "gpqa_diamond.json",
         "file": "gpqa_diamond.json",
     },
@@ -35,6 +41,12 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 10},
         "source": {"dataset": "TIGER-Lab/MMLU-Pro", "subset": None, "split": "test"},
         "tags": ["knowledge", "broad coverage", "10 options"],
+        "toolPolicy": {
+            "modelToolsAllowed": False,
+            "humanToolsAllowed": False,
+            "allowedTools": [],
+            "notes": "Tool rules should stay aligned between model and human attempts.",
+        },
         "generatedQuestionsFile": "mmlu_pro.json",
         "file": "mmlu_pro.json",
     },
@@ -61,9 +73,11 @@ def build_index(generated_dir: Path, benchmarks_dir: Path, output_file: Path) ->
             "name": definition["name"],
             "description": definition["description"],
             "options": definition["options"],
+            "questionCount": len(questions),
             "scoring": definition["scoring"],
             "source": definition["source"],
             "tags": definition["tags"],
+            "toolPolicy": definition["toolPolicy"],
             "questions": questions,
         }
         benchmark_output.write_text(json.dumps(benchmark_payload, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
@@ -73,9 +87,11 @@ def build_index(generated_dir: Path, benchmarks_dir: Path, output_file: Path) ->
                 "name": definition["name"],
                 "description": definition["description"],
                 "options": definition["options"],
+                "questionCount": len(questions),
                 "scoring": definition["scoring"],
                 "source": definition["source"],
                 "tags": definition["tags"],
+                "toolPolicy": definition["toolPolicy"],
                 "file": definition["file"],
             }
         )
