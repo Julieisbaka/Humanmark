@@ -43,6 +43,16 @@ function injectInlineLambdaDelimiters(value) {
 	);
 }
 
+function normalizeDisplayMathDelimiters(value) {
+	return String(value).replace(/(^|[^\n])\$\$([^$\n]+?)\$\$([^\n]|$)/g, (_match, before, inner, after) => {
+		if (!String(inner).trim()) {
+			return `${before}$$${inner}$$${after}`;
+		}
+
+		return `${before}\\(${inner}\\)${after}`;
+	});
+}
+
 function normalizeMathText(value) {
 	const text = String(value);
 	let result = '';
@@ -86,7 +96,7 @@ function normalizeMathText(value) {
 		const looksMath = obviousMathPattern.test(trimmedInner);
 
 		if (!trimmedInner || looksNumeric || (startsNumeric && !looksMath)) {
-			result += `$${inner}$`;
+			result += inner;
 			index = closingIndex;
 			continue;
 		}
@@ -138,6 +148,22 @@ function injectBareLatexDelimiters(value) {
 	return restoreMathSegments(normalized, tokens);
 }
 
+function injectBareMathSequences(value) {
+	const { protectedText, tokens } = shieldMathSegments(String(value));
+
+	const sequencePattern = /(^|[\s(])([A-Za-z](?:_[A-Za-z0-9{}]+)?(?:\^[A-Za-z0-9{}]+)?(?:\s*[+\-*/=,]\s*|\s+)(?:[A-Za-z](?:_[A-Za-z0-9{}]+)?(?:\^[A-Za-z0-9{}]+)?|\\[A-Za-z]+(?:\s*\{[^{}]*\}|\s*[_^]\s*\{[^{}]*\}|\s*[_^]\s*[A-Za-z0-9])?|\d+(?:\/\d+)?)(?:\s*[+\-*/=,]\s*|\s+)?)+(?!\\\()/g;
+
+	const normalized = protectedText.replace(sequencePattern, (_match, prefix, expression) => {
+		if (!/\\[A-Za-z]+/.test(expression)) {
+			return `${prefix}${expression}`;
+		}
+
+		return `${prefix}\\(${expression.trim()}\\)`;
+	});
+
+	return restoreMathSegments(normalized, tokens);
+}
+
 function renderInlineMarkdownCore(value) {
 	const escaped = escapeHtml(value);
 	return escaped
@@ -154,8 +180,36 @@ function renderInlineMarkdownCore(value) {
 		});
 }
 
+function normalizeLatexEnumerations(value) {
+	const normalizeEnvironment = (text, environment) => text.replace(
+		new RegExp(String.raw`\\begin\{${environment}\}(?:\[[^\]]*\])?([\s\S]*?)\\end\{${environment}\}`, 'gi'),
+		(_match, inner) => {
+			const items = String(inner)
+				.split(/\\item\s*/g)
+				.map((item) => item.trim())
+				.filter(Boolean);
+
+			if (!items.length) {
+				return '';
+			}
+
+			const renderedItems = items.map((item, index) => `${index + 1}. ${item}`).join('\n');
+			return `\n\n${renderedItems}\n\n`;
+		},
+	);
+
+	const withEnumerate = normalizeEnvironment(String(value), 'enumerate');
+	return normalizeEnvironment(withEnumerate, 'itemize');
+}
+
 export function renderInlineMarkdown(value) {
-	const normalized = injectBareLatexDelimiters(normalizeMathText(injectInlineLambdaDelimiters(value)));
+	const normalized = injectBareMathSequences(
+		injectBareLatexDelimiters(
+			normalizeMathText(
+				normalizeDisplayMathDelimiters(injectInlineLambdaDelimiters(value)),
+			),
+		),
+	);
 	const { protectedText, tokens } = shieldMathSegments(normalized);
 	const rendered = renderInlineMarkdownCore(protectedText);
 
@@ -193,7 +247,7 @@ export function renderMarkdown(value) {
 		return '';
 	}
 
-	const normalized = String(value).replace(/\r\n/g, '\n').trim();
+	const normalized = normalizeLatexEnumerations(String(value)).replace(/\r\n/g, '\n').trim();
 	if (!normalized) {
 		return '';
 	}
@@ -202,15 +256,30 @@ export function renderMarkdown(value) {
 
 	return blocks
 		.map((block) => {
-			const normalizedBlock = injectBareLatexDelimiters(normalizeMathText(injectInlineLambdaDelimiters(block)));
+			const normalizedBlock = injectBareMathSequences(
+				injectBareLatexDelimiters(
+					normalizeMathText(
+						normalizeDisplayMathDelimiters(injectInlineLambdaDelimiters(block)),
+					),
+				),
+			);
 			const { protectedText, tokens } = shieldMathSegments(normalizedBlock);
 			const lines = protectedText.split('\n').map((line) => line.trimEnd());
 			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
+			const isOrderedList = lines.every((line) => /^\d+\.\s+/.test(line));
 
 			if (isUnorderedList) {
 				const markup = `<ul>${lines
 					.map((line) => `<li>${renderInlineMarkdownCore(line.replace(/^[-*]\s+/, ''))}</li>`)
 					.join('')}</ul>`;
+
+				return restoreMathSegments(markup, tokens);
+			}
+
+			if (isOrderedList) {
+				const markup = `<ol>${lines
+					.map((line) => `<li>${renderInlineMarkdownCore(line.replace(/^\d+\.\s+/, ''))}</li>`)
+					.join('')}</ol>`;
 
 				return restoreMathSegments(markup, tokens);
 			}

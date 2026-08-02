@@ -62,10 +62,15 @@ export function summarizeToolPolicy(toolPolicy) {
 		: 'Benchmark model runs did not allow external tools.';
 
 	const mirrorMessage = 'Try to match this same tool allowance when taking the benchmark for a fair comparison.';
+	const notes = String(toolPolicy.notes ?? '').trim();
+	const normalizedMirror = mirrorMessage.replace(/[^a-z0-9]/gi, '').toLowerCase();
+	const normalizedNotes = notes.replace(/[^a-z0-9]/gi, '').toLowerCase();
+	const hasMirrorInNotes = normalizedNotes.includes(normalizedMirror);
 
-	if (!toolPolicy.notes) {
+	if (!notes) {
 		return `${modelMessage} ${mirrorMessage}`;
 	}
 
-	return `${modelMessage} ${mirrorMessage} ${toolPolicy.notes}`;
+	const bridgeMessage = hasMirrorInNotes ? '' : ` ${mirrorMessage}`;
+	return `${modelMessage}${bridgeMessage} ${notes}`.trim();
 }

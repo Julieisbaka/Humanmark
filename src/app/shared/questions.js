@@ -1,10 +1,14 @@
 function normalizeChoiceText(value) {
-	return String(value)
+	const withoutLabel = String(value)
 		.trim()
 		.replace(/^[a-z]\s*[\)\.\-:]\s*/i, '')
 		.replace(/^\d+\s*[\)\.\-:]\s*/, '')
 		.replace(/\s+/g, ' ')
 		.toLowerCase();
+
+	return withoutLabel
+		.replace(/&amp;/g, '&')
+		.replace(/[^a-z0-9]+/g, '');
 }
 
 export function stripDuplicatedChoiceLines(prompt, choices) {
@@ -28,7 +32,15 @@ export function stripDuplicatedChoiceLines(prompt, choices) {
 			return true;
 		}
 
+		if (/^\s*answer\s+choices?\s*:?\s*$/i.test(line)) {
+			return false;
+		}
+
 		const normalizedLine = normalizeChoiceText(line);
+		if (!normalizedLine) {
+			return true;
+		}
+
 		return !normalizedChoices.has(normalizedLine);
 	});
 
