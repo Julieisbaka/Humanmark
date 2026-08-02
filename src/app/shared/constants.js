@@ -102,6 +102,7 @@ export const BARE_LATEX_COMMANDS = new Set([
 	'theta',
 	'lambda',
 	'mu',
+	'rho',
 	'sigma',
 	'pi',
 	'phi',

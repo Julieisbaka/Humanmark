@@ -36,3 +36,10 @@ test('renderInlineMarkdown does not treat numeric-only $...$ as math', () => {
 
 	assert.equal(html, 'Cost is 100 today.');
 });
+
+test('renderInlineMarkdown auto-wraps bare \\rho but not \\AA', () => {
+	const html = renderInlineMarkdown('density (\\rho) is 0.05 lb/in^3 and thickness is 1000 \\AA');
+
+	assert.ok(html.includes('\\(\\rho\\)'));
+	assert.ok(!html.includes('\\(\\AA\\)'));
+});

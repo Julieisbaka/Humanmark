@@ -61,6 +61,10 @@ export async function renderQuestions(appData) {
 		});
 	};
 
+	const scrollToPageStart = () => {
+		status.scrollIntoView({ block: 'start', behavior: 'auto' });
+	};
+
 	const renderPage = () => {
 		const currentQuestions = pageWindow();
 		status.textContent = `${benchmark.name} · ${selectedQuestions.length} question${selectedQuestions.length === 1 ? '' : 's'} · page ${currentPage}/${totalPages}`;
@@ -125,7 +129,7 @@ export async function renderQuestions(appData) {
 			<div class="actions-row questions-actions-row">
 				<a class="button button--ghost" href="index.html">Choose a different benchmark</a>
 				<div class="actions-row">
-					<button class="button button--ghost" type="button" data-role="prev-page" ${currentPage === 1 ? 'disabled' : ''}>Previous page</button>
+					${currentPage > 1 ? '<button class="button button--ghost" type="button" data-role="prev-page">Previous page</button>' : ''}
 					${currentPage < totalPages ? '<button class="button" type="button" data-role="next-page">Next page</button>' : '<button class="button" type="submit">Score my answers</button>'}
 				</div>
 			</div>
@@ -182,6 +186,7 @@ export async function renderQuestions(appData) {
 				currentQuestionPage: currentPage,
 			});
 			renderPage();
+			scrollToPageStart();
 		});
 
 		nextButton?.addEventListener('click', () => {
@@ -194,6 +199,7 @@ export async function renderQuestions(appData) {
 				currentQuestionPage: currentPage,
 			});
 			renderPage();
+			scrollToPageStart();
 		});
 
 		form?.addEventListener('submit', (event) => {
