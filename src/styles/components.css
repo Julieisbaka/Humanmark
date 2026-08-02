@@ -98,6 +98,34 @@
 	word-break: break-word;
 }
 
+.question-media,
+.review-media {
+	display: grid;
+	gap: 10px;
+	margin-top: 12px;
+}
+
+.question-media-item {
+	margin: 0;
+	border-radius: 14px;
+	overflow: hidden;
+	border: 1px solid var(--border);
+	background: rgba(7, 11, 24, 0.4);
+}
+
+.question-media-item a {
+	display: block;
+}
+
+.question-media-item img {
+	display: block;
+	width: 100%;
+	height: auto;
+	max-height: min(70vh, 560px);
+	object-fit: contain;
+	background: rgba(4, 8, 18, 0.75);
+}
+
 .markdown-content p {
 	margin: 0;
 }
@@ -113,6 +141,17 @@
 
 .markdown-content a {
 	color: var(--accent);
+}
+
+.markdown-content .markdown-inline-image {
+	display: block;
+	max-width: min(100%, 860px);
+	height: auto;
+	margin: 10px 0;
+	border-radius: 14px;
+	border: 1px solid var(--border);
+	background: rgba(7, 11, 24, 0.4);
+	box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
 }
 
 .markdown-content code {

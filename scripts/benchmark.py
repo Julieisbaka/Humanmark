@@ -11,6 +11,8 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
+from urllib.parse import quote
 from pathlib import Path
 from typing import Any
 
@@ -18,6 +20,23 @@ from datasets import Dataset, DatasetDict, load_dataset
 
 
 QUESTION_KEYS = ("question", "prompt", "stem", "query", "input", "text")
+SUPPLEMENTAL_PROMPT_KEYS = (
+    "context",
+    "details",
+    "description",
+    "background",
+    "passage",
+    "problem",
+    "body",
+    "statement",
+    "setup",
+    "question_context",
+    "question_details",
+    "additional_context",
+    "code",
+    "pseudocode",
+    "snippet",
+)
 CHOICE_KEYS = (
     "choices",
     "options",
@@ -47,6 +66,9 @@ ID_KEYS = ("id", "uid", "sample_id", "example_id")
 QUESTION_PROBABILITY_KEYS = ("question_probability", "question_prob", "px", "p_x")
 JOINT_PROBABILITY_KEYS = ("joint_probabilities", "joint_probability", "pxy", "p_xy", "cooccurrence_probabilities")
 CHOICE_PROBABILITY_KEYS = ("choice_probabilities", "choice_probability", "py", "p_y")
+VISUAL_REFERENCE_PATTERN = re.compile(r"\b(figure|diagram|image|plot|chart|shown|below|above|following)\b", re.IGNORECASE)
+CODE_REFERENCE_PATTERN = re.compile(r"\b(pseudocode|code snippet|following code|algorithm)\b", re.IGNORECASE)
+IMAGE_PATH_PATTERN = re.compile(r"\.(?:png|jpe?g|gif|webp|bmp|svg|tiff?)$", re.IGNORECASE)
 
 
 def _normalize_key(key: str) -> str:
@@ -84,6 +106,166 @@ def _first_value(record: dict[str, Any], keys: tuple[str, ...]) -> Any:
         if value not in (None, ""):
             return value
     return None
+
+
+def _has_value(value: Any) -> bool:
+    if value is None:
+        return False
+    if isinstance(value, str):
+        return bool(value.strip())
+    if isinstance(value, (list, tuple, set, dict)):
+        return bool(value)
+    return True
+
+
+def _stringify_prompt_part(value: Any) -> str:
+    if isinstance(value, str):
+        return value.strip()
+
+    if isinstance(value, (list, tuple)):
+        parts = [str(part).strip() for part in value if _has_value(part)]
+        return "\n".join(part for part in parts if part)
+
+    if isinstance(value, dict):
+        for key in ("text", "content", "value", "body", "code", "pseudocode"):
+            candidate = value.get(key)
+            if _has_value(candidate):
+                return _stringify_prompt_part(candidate)
+        return ""
+
+    return str(value).strip()
+
+
+def _build_prompt(example: dict[str, Any], base_prompt: Any) -> str:
+    prompt = _stringify_prompt_part(base_prompt)
+    sections: list[str] = []
+
+    for key in SUPPLEMENTAL_PROMPT_KEYS:
+        raw_value = _get_value(example, key)
+        if not _has_value(raw_value):
+            continue
+
+        section = _stringify_prompt_part(raw_value)
+        if not section:
+            continue
+
+        if section == prompt or section in prompt:
+            continue
+
+        if key in {"code", "pseudocode", "snippet"}:
+            section = f"{key.capitalize()}:\n{section}"
+
+        if any(existing == section for existing in sections):
+            continue
+
+        sections.append(section)
+
+    if not sections:
+        return prompt
+
+    return f"{prompt}\n\n" + "\n\n".join(sections)
+
+
+def _has_visual_payload(example: dict[str, Any]) -> bool:
+    for key, value in example.items():
+        normalized_key = _normalize_key(str(key))
+        if any(marker in normalized_key for marker in ("image", "figure", "diagram", "plot", "chart")) and _has_value(value):
+            return True
+    return False
+
+
+def _looks_like_image_url(value: str) -> bool:
+    text = value.strip()
+    return text.startswith("http://") or text.startswith("https://") or text.startswith("data:image/")
+
+
+def _looks_like_image_path(value: str) -> bool:
+    text = value.strip()
+    if not text or "\n" in text or "\r" in text or text.startswith("{"):
+        return False
+    return bool(IMAGE_PATH_PATTERN.search(text))
+
+
+def _resolve_media_source(value: str, dataset_name: str | None) -> str | None:
+    text = value.strip()
+    if not text:
+        return None
+
+    if _looks_like_image_url(text):
+        return text
+
+    if dataset_name and _looks_like_image_path(text):
+        normalized_path = text.lstrip("/")
+        encoded_path = quote(normalized_path, safe="/._-~")
+        return f"https://huggingface.co/datasets/{dataset_name}/resolve/main/{encoded_path}"
+
+    return None
+
+
+def _extract_media_sources_from_value(value: Any, dataset_name: str | None) -> list[str]:
+    if not _has_value(value):
+        return []
+
+    if isinstance(value, str):
+        resolved = _resolve_media_source(value, dataset_name)
+        return [resolved] if resolved else []
+
+    if isinstance(value, dict):
+        sources: list[str] = []
+        for key in ("url", "uri", "src", "source", "path", "file", "filename", "image", "figure"):
+            candidate = value.get(key)
+            if not _has_value(candidate):
+                continue
+            sources.extend(_extract_media_sources_from_value(candidate, dataset_name))
+        return sources
+
+    if isinstance(value, (list, tuple, set)):
+        sources: list[str] = []
+        for item in value:
+            sources.extend(_extract_media_sources_from_value(item, dataset_name))
+        return sources
+
+    return []
+
+
+def _extract_media_sources(example: dict[str, Any], dataset_name: str | None) -> list[str]:
+    extracted: list[str] = []
+
+    for key, value in example.items():
+        normalized_key = _normalize_key(str(key))
+        if not any(marker in normalized_key for marker in ("image", "figure", "diagram", "plot", "chart", "media")):
+            continue
+
+        extracted.extend(_extract_media_sources_from_value(value, dataset_name))
+
+    deduplicated: list[str] = []
+    seen = set()
+    for source in extracted:
+        if source in seen:
+            continue
+        seen.add(source)
+        deduplicated.append(source)
+
+    return deduplicated
+
+
+def _should_skip_incomplete_visual_question(
+    example: dict[str, Any],
+    prompt: str,
+    has_textual_supplement: bool,
+    media_sources: list[str],
+) -> bool:
+    if not _has_visual_payload(example):
+        return False
+
+    if VISUAL_REFERENCE_PATTERN.search(prompt):
+        if media_sources:
+            return False
+        if CODE_REFERENCE_PATTERN.search(prompt) and has_textual_supplement:
+            return False
+        return True
+
+    return False
 
 
 def _fallback_choices(record: dict[str, Any], raw_answer: Any) -> list[str]:
@@ -162,8 +344,6 @@ def _choices_from_prompt(prompt: Any) -> list[str]:
     if not text:
         return []
 
-    import re
-
     patterns = [
         re.compile(r"^\s*([A-J])[\)\].:-]\s*(.+?)\s*$", re.IGNORECASE),
         re.compile(r"^\s*\(([A-J])\)\s*(.+?)\s*$", re.IGNORECASE),
@@ -195,8 +375,6 @@ def _choices_from_prompt(prompt: Any) -> list[str]:
 
 
 def _trim_choice_prefixes(text: str) -> str:
-    import re
-
     return re.sub(r"^\s*(?:\(?[A-Z]\)?|\d+)\s*[\)\].:-]\s*", "", text.strip())
 
 
@@ -222,8 +400,6 @@ def _choice_index_from_choice_text(raw_answer: Any, choices: list[str]) -> int |
 
 
 def _choice_index_from_embedded_label(raw_answer: Any, choices: list[str]) -> int | None:
-    import re
-
     if not isinstance(raw_answer, str):
         return None
 
@@ -341,7 +517,7 @@ def _answer_index(raw_answer: Any, choices: list[str]) -> int:
     raise ValueError(f"Could not infer answer index from {raw_answer!r}")
 
 
-def parse(dataset: Any) -> list[dict[str, Any]]:
+def parse(dataset: Any, dataset_name: str | None = None) -> list[dict[str, Any]]:
     if isinstance(dataset, DatasetDict):
         split_name = next(iter(dataset.keys()))
         dataset = dataset[split_name]
@@ -362,8 +538,15 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
         if not isinstance(example, dict):
             continue
 
-        prompt = _first_value(example, QUESTION_KEYS)
-        if prompt is None:
+        base_prompt = _first_value(example, QUESTION_KEYS)
+        if base_prompt is None:
+            continue
+
+        prompt = _build_prompt(example, base_prompt)
+        has_textual_supplement = prompt.strip() != _stringify_prompt_part(base_prompt)
+        media_sources = _extract_media_sources(example, dataset_name)
+
+        if _should_skip_incomplete_visual_question(example, prompt, has_textual_supplement, media_sources):
             continue
 
         raw_answer = _first_value(example, ANSWER_KEYS)
@@ -401,6 +584,7 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
                 "choices": choices,
                 "answerIndex": answer_index,
                 **({"explanation": str(explanation).strip()} if explanation is not None else {}),
+                **({"media": media_sources} if media_sources else {}),
                 **({"pmi": pmi} if pmi is not None else {}),
             }
         )
@@ -437,7 +621,7 @@ def _parse_args() -> argparse.Namespace:
 def main() -> None:
     args = _parse_args()
     dataset = load(args.dataset, task=args.task, split=args.split)
-    parsed = parse(dataset)
+    parsed = parse(dataset, dataset_name=args.dataset)
     output_path = save(parsed, args.output)
     print(f"Saved {len(parsed)} compact questions to {output_path}")
 

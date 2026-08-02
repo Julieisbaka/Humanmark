@@ -1,5 +1,5 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
-import { escapeHtml, loadBenchmarkDetails, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
+import { escapeHtml, loadBenchmarkDetails, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
 const DEFAULT_LEADERBOARD_LIMIT = 100;
@@ -10,7 +10,7 @@ export async function renderResults(appData) {
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const summary = document.querySelector('[data-role="result-summary"]');
 	const leaderboard = document.querySelector('[data-role="leaderboard"]');
-	const review = document.querySelector('[data-role="review"]');	
+	const review = document.querySelector('[data-role="review"]');
 	const meta = document.querySelector('[data-role="results-meta"]');
 
 	if (!state || !benchmark || !state.score || !summary || !leaderboard || !review || !meta) {
@@ -234,6 +234,7 @@ export async function renderResults(appData) {
 						const explanationMarkup = String(explanation).trim()
 							? `<details class="review-explanation"><summary><span class="eyebrow">Benchmark explanation</span><span class="review-explanation-toggle">Show explanation</span></summary><div class="markdown-content">${renderMarkdown(explanation)}</div></details>`
 							: '';
+						const mediaMarkup = renderImageGallery(question.media, 'review-media');
 						const selected = question.selectedIndex === null ? 'No answer selected' : question.choices[question.selectedIndex];
 
 						return `
@@ -241,6 +242,7 @@ export async function renderResults(appData) {
 								<div>
 									<p class="eyebrow">Question ${index + 1}</p>
 									<div class="markdown-content review-prompt">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
+									${mediaMarkup}
 								</div>
 								<dl class="stats-grid stats-grid--compact">
 									<div>

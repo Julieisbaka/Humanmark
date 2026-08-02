@@ -132,6 +132,8 @@ const BARE_LATEX_COMMANDS = new Set([
 function normalizeMathText(value) {
 	const text = String(value);
 	let result = '';
+	const numericOnlyPattern = /^[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|[a-zA-Zµμ°]+))?$/;
+	const obviousMathPattern = /\\[A-Za-z]+|[_^{}]|[=<>±×÷∑∫]|\b(?:sin|cos|tan|log|ln|max|min)\b/i;
 
 	for (let index = 0; index < text.length; index += 1) {
 		const character = text[index];
@@ -144,12 +146,6 @@ function normalizeMathText(value) {
 		if (text[index + 1] === '$') {
 			result += '$$';
 			index += 1;
-			continue;
-		}
-
-		const nextNonSpace = text.slice(index + 1).match(/^\s*([^\s])/);
-		if (nextNonSpace && /\d/.test(nextNonSpace[1])) {
-			result += '$';
 			continue;
 		}
 
@@ -168,9 +164,11 @@ function normalizeMathText(value) {
 
 		const inner = text.slice(index + 1, closingIndex);
 		const trimmedInner = inner.trim();
-		const looksNumeric = /^[-+]?\d[\d,]*(?:\.\d+)?$/.test(trimmedInner) || /^[-+]?\d[\d,]*(?:\.\d+)?\s*(?:%|[a-zA-Zµμ°]+)$/.test(trimmedInner);
+		const startsNumeric = /^[-+]?\d/.test(trimmedInner);
+		const looksNumeric = numericOnlyPattern.test(trimmedInner);
+		const looksMath = obviousMathPattern.test(trimmedInner);
 
-		if (!trimmedInner || looksNumeric) {
+		if (!trimmedInner || looksNumeric || (startsNumeric && !looksMath)) {
 			result += '$';
 			continue;
 		}
@@ -431,8 +429,18 @@ function injectInlineLambdaDelimiters(value) {
 export function renderInlineMarkdown(value) {
 	const normalized = injectBareLatexDelimiters(normalizeMathText(injectInlineLambdaDelimiters(value)));
 	const { protectedText, tokens } = shieldMathSegments(normalized);
-	const escaped = escapeHtml(protectedText);
-	const rendered = escaped
+	const rendered = renderInlineMarkdownCore(protectedText);
+
+	return restoreMathSegments(rendered, tokens);
+}
+
+function renderInlineMarkdownCore(value) {
+	const escaped = escapeHtml(value);
+	return escaped
+		.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (_match, alt, src) => {
+			const safeSrc = escapeAttribute(sanitizeHref(src));
+			return `<img class="markdown-inline-image" src="${safeSrc}" alt="${alt}" loading="lazy" decoding="async" />`;
+		})
 		.replace(/`([^`]+)`/g, '<code>$1</code>')
 		.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
 		.replace(/\*([^*]+)\*/g, '<em>$1</em>')
@@ -440,8 +448,32 @@ export function renderInlineMarkdown(value) {
 			const safeHref = escapeAttribute(sanitizeHref(href));
 			return `<a href="${safeHref}" target="_blank" rel="noopener noreferrer">${label}</a>`;
 		});
+}
 
-	return restoreMathSegments(rendered, tokens);
+export function renderImageGallery(sources, galleryClass = 'question-media') {
+	if (!Array.isArray(sources) || !sources.length) {
+		return '';
+	}
+
+	const safeSources = [...new Set(sources
+		.map((source) => escapeAttribute(sanitizeHref(source)))
+		.filter((source) => source && source !== '#'))];
+
+	if (!safeSources.length) {
+		return '';
+	}
+
+	const items = safeSources
+		.map((source, index) => `
+			<figure class="question-media-item">
+				<a href="${source}" target="_blank" rel="noopener noreferrer">
+					<img src="${source}" alt="Question diagram ${index + 1}" loading="lazy" decoding="async" />
+				</a>
+			</figure>
+		`)
+		.join('');
+
+	return `<div class="${galleryClass}">${items}</div>`;
 }
 
 export function renderMarkdown(value) {
@@ -458,16 +490,21 @@ export function renderMarkdown(value) {
 
 	return blocks
 		.map((block) => {
-			const lines = block.split('\n').map((line) => line.trimEnd());
+			const normalizedBlock = injectBareLatexDelimiters(normalizeMathText(injectInlineLambdaDelimiters(block)));
+			const { protectedText, tokens } = shieldMathSegments(normalizedBlock);
+			const lines = protectedText.split('\n').map((line) => line.trimEnd());
 			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
 
 			if (isUnorderedList) {
-				return `<ul>${lines
-					.map((line) => `<li>${renderInlineMarkdown(line.replace(/^[-*]\s+/, ''))}</li>`)
+				const markup = `<ul>${lines
+					.map((line) => `<li>${renderInlineMarkdownCore(line.replace(/^[-*]\s+/, ''))}</li>`)
 					.join('')}</ul>`;
+
+				return restoreMathSegments(markup, tokens);
 			}
 
-			return `<p>${lines.map((line) => renderInlineMarkdown(line)).join('<br>')}</p>`;
+			const markup = `<p>${lines.map((line) => renderInlineMarkdownCore(line)).join('<br>')}</p>`;
+			return restoreMathSegments(markup, tokens);
 		})
 		.join('');
 }
