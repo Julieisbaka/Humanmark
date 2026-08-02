@@ -5,6 +5,7 @@
 gpqa_diamond.json
 humanitys_last_exam.json
 mmlu_pro.json
+index.json
 
 # Python
 __pycache__/
