@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   build:
-    if: github.event_name != 'push' || (github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
+    if: github.event_name != 'push' || (!contains(github.event.head_commit.message, 'pages updated for') && github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
     runs-on: ubuntu-latest
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
@@ -69,7 +69,7 @@ jobs:
           path: dist
 
   deploy:
-    if: github.event_name != 'push' || (github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
+    if: github.event_name != 'push' || (!contains(github.event.head_commit.message, 'pages updated for') && github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -93,5 +93,5 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           TRIGGER_SHA="${GITHUB_SHA:0:7}"
-          git commit --allow-empty -m "pages updated for ${TRIGGER_SHA} [skip ci]"
+          git commit --allow-empty -m "pages updated for ${TRIGGER_SHA} [skip ci] [ci skip] [no ci] [skip actions] [actions skip]"
           git push origin HEAD:main
