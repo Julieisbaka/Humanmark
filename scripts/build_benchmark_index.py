@@ -27,7 +27,6 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "toolPolicy": {
             "modelToolsAllowed": False,
             "allowedTools": [],
-            "notes": "Use the same tool allowance for fair comparison.",
         },
         "generatedQuestionsFile": "gpqa_diamond.json",
         "file": "gpqa_diamond.json",
@@ -43,7 +42,6 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "toolPolicy": {
             "modelToolsAllowed": False,
             "allowedTools": [],
-            "notes": "Use the same tool allowance for fair comparison.",
         },
         "generatedQuestionsFile": "humanitys_last_exam.json",
         "file": "humanitys_last_exam.json",
@@ -59,7 +57,6 @@ BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
         "toolPolicy": {
             "modelToolsAllowed": False,
             "allowedTools": [],
-            "notes": "Use the same tool allowance for fair comparison.",
         },
         "generatedQuestionsFile": "mmlu_pro.json",
         "file": "mmlu_pro.json",
