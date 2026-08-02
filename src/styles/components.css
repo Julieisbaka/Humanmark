@@ -194,7 +194,7 @@
 	background: rgba(14, 22, 40, 0.28);
 	border: 1px solid rgba(157, 177, 255, 0.1);
 	border-radius: 12px;
-	transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+	transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
 .choice-select {
@@ -211,14 +211,33 @@
 	flex: 1;
 }
 
+.choice-text .katex-display {
+	margin: 0.3rem 0 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	padding-bottom: 2px;
+}
+
+.choice-text .katex-display:first-child {
+	margin-top: 0;
+}
+
 .choice-item input {
 	accent-color: var(--accent-2);
 }
 
-.choice-item:hover {
+@media (hover: hover) and (pointer: fine) {
+	.choice-item:hover {
+		background: rgba(14, 22, 40, 0.5);
+		border-color: rgba(157, 177, 255, 0.22);
+		box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+	}
+}
+
+.choice-item:focus-within {
 	background: rgba(14, 22, 40, 0.5);
-	border-color: rgba(157, 177, 255, 0.18);
-	transform: translateY(-1px);
+	border-color: rgba(157, 177, 255, 0.24);
+	box-shadow: 0 0 0 2px rgba(138, 180, 248, 0.16);
 }
 
 .choice-item:has(input:checked) {

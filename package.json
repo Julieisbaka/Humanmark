@@ -2,6 +2,12 @@
     "name": "Humanmark",
     "description": "Humanmark is a free and open-source website that allows users to compare themselves against AI models on a variety of AI benchmarks.",
     "private": true,
+    "type": "module",
+    "scripts": {
+        "test": "npm run test:js && npm run test:python",
+        "test:js": "node --test tests/markdown_parser.test.mjs tests/questions_parser.test.mjs",
+        "test:python": "c:/Users/caspe/Desktop/Humanmark/.venv-1/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\""
+    },
     "devDependencies": {
         "eslint": "^10.8.0"
     }

@@ -53,11 +53,35 @@ function normalizeDisplayMathDelimiters(value) {
 	});
 }
 
+function normalizeSingleDollarBlockMath(value) {
+	return String(value).replace(/(^|\n)\s*\$\s*\n([\s\S]*?)\n\s*\$\s*(?=\n|$)/g, (_match, prefix, inner) => {
+		const content = String(inner).trim();
+		if (!content) {
+			return `${prefix}`;
+		}
+
+		return `${prefix}$$\n${content}\n$$`;
+	});
+}
+
+function normalizeDisplayMathContent(value) {
+	return String(value)
+		.replace(/\$\$([\s\S]*?)\$\$/g, (_match, inner) => {
+			const cleaned = String(inner).replace(/\s*\\\\\s*$/m, '').trimEnd();
+			return `$$${cleaned}$$`;
+		})
+		.replace(/\\\[([\s\S]*?)\\\]/g, (_match, inner) => {
+			const cleaned = String(inner).replace(/\s*\\\\\s*$/m, '').trimEnd();
+			return `\\[${cleaned}\\]`;
+		});
+}
+
 function normalizeMathText(value) {
 	const text = String(value);
 	let result = '';
 	const numericOnlyPattern = /^[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|[a-zA-Zµμ°]+))?$/;
 	const obviousMathPattern = /\\[A-Za-z]+|[_^{}]|[=<>±×÷∑∫]|\b(?:sin|cos|tan|log|ln|max|min)\b/i;
+	const shouldUseDisplayMath = (content) => /\\\\|\\begin\{|\\end\{|\n/.test(content);
 	const escapeLatexSpecials = (content) => content
 		.replace(/(^|[^\\])#/g, '$1\\#')
 		.replace(/(^|[^\\])%/g, '$1\\%');
@@ -102,7 +126,9 @@ function normalizeMathText(value) {
 		}
 
 		const sanitizedInner = escapeLatexSpecials(inner);
-		result += `\\(${sanitizedInner}\\)`;
+		result += shouldUseDisplayMath(sanitizedInner)
+			? `\\[${sanitizedInner}\\]`
+			: `\\(${sanitizedInner}\\)`;
 		index = closingIndex;
 	}
 
@@ -121,7 +147,7 @@ function shieldMathSegments(value) {
 }
 
 function restoreMathSegments(value, tokens) {
-	return tokens.reduce((output, { token, match }) => output.replaceAll(token, match), value);
+	return tokens.reduce((output, { token, match }) => output.split(token).join(match), value);
 }
 
 function injectBareLatexDelimiters(value) {
@@ -202,14 +228,26 @@ function normalizeLatexEnumerations(value) {
 	return normalizeEnvironment(withEnumerate, 'itemize');
 }
 
-export function renderInlineMarkdown(value) {
-	const normalized = injectBareMathSequences(
-		injectBareLatexDelimiters(
-			normalizeMathText(
-				normalizeDisplayMathDelimiters(injectInlineLambdaDelimiters(value)),
-			),
+function normalizeMathInput(value) {
+	const prepared = normalizeDisplayMathDelimiters(
+		normalizeSingleDollarBlockMath(
+			injectInlineLambdaDelimiters(value),
 		),
 	);
+
+	const { protectedText, tokens } = shieldMathSegments(prepared);
+
+	const normalizedText = injectBareMathSequences(
+		injectBareLatexDelimiters(
+			normalizeMathText(protectedText),
+		),
+	);
+
+	return normalizeDisplayMathContent(restoreMathSegments(normalizedText, tokens));
+}
+
+export function renderInlineMarkdown(value) {
+	const normalized = normalizeMathInput(value);
 	const { protectedText, tokens } = shieldMathSegments(normalized);
 	const rendered = renderInlineMarkdownCore(protectedText);
 
@@ -256,13 +294,7 @@ export function renderMarkdown(value) {
 
 	return blocks
 		.map((block) => {
-			const normalizedBlock = injectBareMathSequences(
-				injectBareLatexDelimiters(
-					normalizeMathText(
-						normalizeDisplayMathDelimiters(injectInlineLambdaDelimiters(block)),
-					),
-				),
-			);
+			const normalizedBlock = normalizeMathInput(block);
 			const { protectedText, tokens } = shieldMathSegments(normalizedBlock);
 			const lines = protectedText.split('\n').map((line) => line.trimEnd());
 			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
@@ -300,6 +332,7 @@ export function renderMathIn(element) {
 			{ left: '$$', right: '$$', display: true },
 			{ left: '\\[', right: '\\]', display: true },
 			{ left: '\\(', right: '\\)', display: false },
+			{ left: '$', right: '$', display: false },
 		],
 		throwOnError: false,
 		strict: 'ignore',
