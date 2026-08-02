@@ -134,6 +134,9 @@ function normalizeMathText(value) {
 	let result = '';
 	const numericOnlyPattern = /^[-+]?\d[\d,]*(?:\.\d+)?(?:\s*(?:%|[a-zA-Zµμ°]+))?$/;
 	const obviousMathPattern = /\\[A-Za-z]+|[_^{}]|[=<>±×÷∑∫]|\b(?:sin|cos|tan|log|ln|max|min)\b/i;
+	const escapeLatexSpecials = (content) => content
+		.replace(/(^|[^\\])#/g, '$1\\#')
+		.replace(/(^|[^\\])%/g, '$1\\%');
 
 	for (let index = 0; index < text.length; index += 1) {
 		const character = text[index];
@@ -173,7 +176,8 @@ function normalizeMathText(value) {
 			continue;
 		}
 
-		result += `\\(${inner}\\)`;
+		const sanitizedInner = escapeLatexSpecials(inner);
+		result += `\\(${sanitizedInner}\\)`;
 		index = closingIndex;
 	}
 

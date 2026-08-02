@@ -66,7 +66,15 @@ ID_KEYS = ("id", "uid", "sample_id", "example_id")
 QUESTION_PROBABILITY_KEYS = ("question_probability", "question_prob", "px", "p_x")
 JOINT_PROBABILITY_KEYS = ("joint_probabilities", "joint_probability", "pxy", "p_xy", "cooccurrence_probabilities")
 CHOICE_PROBABILITY_KEYS = ("choice_probabilities", "choice_probability", "py", "p_y")
-VISUAL_REFERENCE_PATTERN = re.compile(r"\b(figure|diagram|image|plot|chart|shown|below|above|following)\b", re.IGNORECASE)
+VISUAL_REFERENCE_PATTERN = re.compile(
+    r"\b(?:"
+    r"this\s+image|in\s+the\s+image|shown\s+in\s+the\s+image|"
+    r"this\s+diagram|in\s+the\s+diagram|shown\s+below|shown\s+above|"
+    r"following\s+image|following\s+diagram|the\s+image\s+below|the\s+diagram\s+below|"
+    r"figure\s+below|figure\s+above|see\s+the\s+image|see\s+the\s+diagram"
+    r")\b",
+    re.IGNORECASE,
+)
 CODE_REFERENCE_PATTERN = re.compile(r"\b(pseudocode|code snippet|following code|algorithm)\b", re.IGNORECASE)
 IMAGE_PATH_PATTERN = re.compile(r"\.(?:png|jpe?g|gif|webp|bmp|svg|tiff?)$", re.IGNORECASE)
 
@@ -255,9 +263,6 @@ def _should_skip_incomplete_visual_question(
     has_textual_supplement: bool,
     media_sources: list[str],
 ) -> bool:
-    if not _has_visual_payload(example):
-        return False
-
     if VISUAL_REFERENCE_PATTERN.search(prompt):
         if media_sources:
             return False
