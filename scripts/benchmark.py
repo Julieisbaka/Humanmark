@@ -30,6 +30,10 @@ CHOICE_KEYS = (
 ANSWER_KEYS = (
     "answer",
     "answers",
+    "answer_key",
+    "answerkey",
+    "answer_letter",
+    "answerletter",
     "label",
     "correct",
     "correct_answer",
@@ -138,13 +142,109 @@ def _normalize_choices(raw_choices: Any) -> list[str]:
 
 def _option_choices(record: dict[str, Any]) -> list[str]:
     choices: list[str] = []
+
     for letter in "abcdefghijklmnopqrstuvwxyz":
-        value = _get_value(record, f"option_{letter}")
-        if value in (None, ""):
-            break
-        choices.append(str(value))
+        value = None
+        for key in (f"option_{letter}", f"choice_{letter}", f"answer_{letter}", letter, letter.upper()):
+            candidate = _get_value(record, key)
+            if candidate not in (None, ""):
+                value = candidate
+                break
+
+        if value not in (None, ""):
+            choices.append(str(value))
 
     return choices
+
+
+def _choices_from_prompt(prompt: Any) -> list[str]:
+    text = str(prompt)
+    if not text:
+        return []
+
+    import re
+
+    patterns = [
+        re.compile(r"^\s*([A-J])[\)\].:-]\s*(.+?)\s*$", re.IGNORECASE),
+        re.compile(r"^\s*\(([A-J])\)\s*(.+?)\s*$", re.IGNORECASE),
+    ]
+
+    labeled_choices: dict[str, str] = {}
+
+    for raw_line in text.splitlines():
+        line = raw_line.strip()
+        if not line:
+            continue
+
+        for pattern in patterns:
+            matched = pattern.match(line)
+            if not matched:
+                continue
+
+            letter = matched.group(1).upper()
+            choice_text = matched.group(2).strip()
+            if choice_text and letter not in labeled_choices:
+                labeled_choices[letter] = choice_text
+            break
+
+    if len(labeled_choices) < 2:
+        return []
+
+    ordered_letters = sorted(labeled_choices.keys())
+    return [labeled_choices[letter] for letter in ordered_letters]
+
+
+def _trim_choice_prefixes(text: str) -> str:
+    import re
+
+    return re.sub(r"^\s*(?:\(?[A-Z]\)?|\d+)\s*[\)\].:-]\s*", "", text.strip())
+
+
+def _choice_index_from_letter(letter: str, choices: list[str]) -> int | None:
+    if len(letter) != 1 or not ("A" <= letter <= "Z"):
+        return None
+
+    index = ord(letter) - ord("A")
+    return index if 0 <= index < len(choices) else None
+
+
+def _choice_index_from_choice_text(raw_answer: Any, choices: list[str]) -> int | None:
+    normalized_answer = _trim_choice_prefixes(str(raw_answer)).casefold()
+    if not normalized_answer:
+        return None
+
+    for index, choice in enumerate(choices):
+        normalized_choice = _trim_choice_prefixes(str(choice)).casefold()
+        if normalized_answer == normalized_choice:
+            return index
+
+    return None
+
+
+def _choice_index_from_embedded_label(raw_answer: Any, choices: list[str]) -> int | None:
+    import re
+
+    if not isinstance(raw_answer, str):
+        return None
+
+    cleaned = raw_answer.strip()
+    if not cleaned:
+        return None
+
+    patterns = [
+        re.compile(r"^\(?\s*([A-Z])\s*\)?$"),
+        re.compile(r"^(?:option|choice|answer)\s*[:\-]?\s*\(?\s*([A-Z])\s*\)?$", re.IGNORECASE),
+    ]
+
+    for pattern in patterns:
+        matched = pattern.match(cleaned)
+        if not matched:
+            continue
+
+        letter = matched.group(1).upper()
+        return _choice_index_from_letter(letter, choices)
+
+    return None
 
 
 def _normalize_number_list(value: Any) -> list[float] | None:
@@ -194,6 +294,14 @@ def _extract_pmi(record: dict[str, Any], choice_count: int) -> dict[str, Any] | 
 
 
 def _answer_index(raw_answer: Any, choices: list[str]) -> int:
+    if isinstance(raw_answer, (list, tuple)):
+        for candidate in raw_answer:
+            try:
+                return _answer_index(candidate, choices)
+            except ValueError:
+                continue
+        raise ValueError(f"Could not infer answer index from {raw_answer!r}")
+
     if isinstance(raw_answer, bool):
         return int(raw_answer)
 
@@ -209,6 +317,10 @@ def _answer_index(raw_answer: Any, choices: list[str]) -> int:
         if cleaned.isdigit():
             return int(cleaned)
 
+        embedded_label_index = _choice_index_from_embedded_label(cleaned, choices)
+        if embedded_label_index is not None:
+            return embedded_label_index
+
         letter = cleaned.upper()
         if len(letter) == 1 and "A" <= letter <= "Z":
             return ord(letter) - ord("A")
@@ -217,8 +329,12 @@ def _answer_index(raw_answer: Any, choices: list[str]) -> int:
             if cleaned.casefold() == choice.casefold():
                 return index
 
+        choice_text_index = _choice_index_from_choice_text(cleaned, choices)
+        if choice_text_index is not None:
+            return choice_text_index
+
     if isinstance(raw_answer, dict):
-        for key in ("index", "answer_index", "choice", "value", "label"):
+        for key in ("index", "answer_index", "choice", "value", "label", "answer", "text"):
             if key in raw_answer:
                 return _answer_index(raw_answer[key], choices)
 
@@ -258,6 +374,8 @@ def parse(dataset: Any) -> list[dict[str, Any]]:
         choices = _normalize_choices(raw_choices)
         if not choices:
             choices = _option_choices(example)
+        if not choices:
+            choices = _choices_from_prompt(prompt)
         if not choices:
             choices = _fallback_choices(example, raw_answer)
 

@@ -80,6 +80,54 @@ const MEASUREMENT_UNITS = new Map([
 	['hour', { dimension: 'time', factor: 3600 }],
 	['hours', { dimension: 'time', factor: 3600 }],
 ]);
+const BARE_LATEX_COMMANDS = new Set([
+	'frac',
+	'sqrt',
+	'cdot',
+	'times',
+	'leq',
+	'geq',
+	'neq',
+	'approx',
+	'pm',
+	'mp',
+	'alpha',
+	'beta',
+	'gamma',
+	'delta',
+	'epsilon',
+	'theta',
+	'lambda',
+	'mu',
+	'sigma',
+	'pi',
+	'phi',
+	'psi',
+	'omega',
+	'sum',
+	'prod',
+	'int',
+	'lim',
+	'log',
+	'ln',
+	'sin',
+	'cos',
+	'tan',
+	'sec',
+	'csc',
+	'cot',
+	'mathrm',
+	'mathbf',
+	'text',
+	'left',
+	'right',
+	'overline',
+	'underline',
+	'hat',
+	'bar',
+	'vec',
+	'infty',
+]);
 
 function normalizeMathText(value) {
 	const text = String(value);
@@ -132,6 +180,30 @@ function normalizeMathText(value) {
 	}
 
 	return result;
+}
+
+function injectBareLatexDelimiters(value) {
+	const { protectedText, tokens } = shieldMathSegments(String(value));
+
+	const commandPattern = /\\([A-Za-z]+)(?:\s*\{[^{}]*\}|\s*\[[^\]]*\]|\s*[_^]\s*\{[^{}]*\}|\s*[_^]\s*[A-Za-z0-9]|\s*[A-Za-z0-9])*/g;
+	const normalized = protectedText.replace(commandPattern, (match, command, offset, fullText) => {
+		if (!BARE_LATEX_COMMANDS.has(String(command).toLowerCase())) {
+			return match;
+		}
+
+		const before = offset > 0 ? fullText[offset - 1] : '';
+		const after = fullText[offset + match.length] ?? '';
+		const beforeLooksMath = !before || /[\s(\[{=:+\-*/,]/.test(before);
+		const afterLooksMath = !after || /[\s)\]};:,.+\-*/=<>=]/.test(after);
+
+		if (!beforeLooksMath && !afterLooksMath) {
+			return match;
+		}
+
+		return `\\(${match}\\)`;
+	});
+
+	return restoreMathSegments(normalized, tokens);
 }
 
 function shieldMathSegments(value) {
@@ -250,16 +322,18 @@ function parseSortableChoiceValue(choice) {
 		const suffix = attachedSuffix || separatedSuffix;
 
 		if (Number.isFinite(numericValue)) {
-			const measurement = MEASUREMENT_UNITS.get(suffix);
-			if (measurement) {
-				return numericValue * measurement.factor;
-			}
-
-			if (CURRENCY_PREFIXES.has(prefix) || CURRENCY_PREFIXES.has(prefix.toLowerCase())) {
+			if (CURRENCY_PREFIXES.has(prefix) || CURRENCY_PREFIXES.has(suffix)) {
 				const scale = SCALE_WORDS.get(suffix);
 				if (scale) {
 					return numericValue * scale;
 				}
+
+				return numericValue;
+			}
+
+			const measurement = MEASUREMENT_UNITS.get(suffix);
+			if (measurement) {
+				return numericValue * measurement.factor;
 			}
 
 			const scale = SCALE_WORDS.get(suffix);
@@ -355,7 +429,7 @@ function injectInlineLambdaDelimiters(value) {
 }
 
 export function renderInlineMarkdown(value) {
-	const normalized = normalizeMathText(injectInlineLambdaDelimiters(value));
+	const normalized = injectBareLatexDelimiters(normalizeMathText(injectInlineLambdaDelimiters(value)));
 	const { protectedText, tokens } = shieldMathSegments(normalized);
 	const escaped = escapeHtml(protectedText);
 	const rendered = escaped
