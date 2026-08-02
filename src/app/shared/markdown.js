@@ -20,6 +20,10 @@ function sanitizeHref(rawHref) {
 		return '#';
 	}
 
+	if (decoded.startsWith('data:image/')) {
+		return decoded;
+	}
+
 	try {
 		const resolved = new URL(decoded, window.location.origin);
 		if (['http:', 'https:', 'mailto:'].includes(resolved.protocol)) {
@@ -82,7 +86,8 @@ function normalizeMathText(value) {
 		const looksMath = obviousMathPattern.test(trimmedInner);
 
 		if (!trimmedInner || looksNumeric || (startsNumeric && !looksMath)) {
-			result += '$';
+			result += `$${inner}$`;
+			index = closingIndex;
 			continue;
 		}
 

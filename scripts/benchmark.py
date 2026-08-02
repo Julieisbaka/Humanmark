@@ -7,8 +7,12 @@ the package namespace:
 - scripts.benchmark.io
 """
 
-from scripts.benchmark.core import ParseStats, parse, save
-from scripts.benchmark.io import load, main
+try:
+    from scripts.benchmark.core import ParseStats, parse, save
+    from scripts.benchmark.io import load, main
+except ModuleNotFoundError:
+    from benchmark.core import ParseStats, parse, save
+    from benchmark.io import load, main
 
 __all__ = ["ParseStats", "load", "main", "parse", "save"]
 

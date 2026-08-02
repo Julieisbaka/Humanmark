@@ -6,7 +6,10 @@ from pathlib import Path
 
 from datasets import load_dataset
 
-from scripts.benchmark_core import parse, save
+try:
+    from scripts.benchmark_core import parse, save
+except ModuleNotFoundError:
+    from benchmark_core import parse, save
 
 
 def load(dataset: str, task: str | None = None, split: str | None = None):

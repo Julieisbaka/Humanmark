@@ -4,6 +4,9 @@ The implementation currently lives in scripts.benchmark_io.
 This wrapper establishes scripts.benchmark.io as the stable import path.
 """
 
-from scripts.benchmark_io import load, main, parse_args
+try:
+	from scripts.benchmark_io import load, main, parse_args
+except ModuleNotFoundError:
+	from benchmark_io import load, main, parse_args
 
 __all__ = ["load", "main", "parse_args"]

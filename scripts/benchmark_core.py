@@ -10,23 +10,42 @@ from urllib.parse import quote
 
 from datasets import Dataset, DatasetDict
 
-from scripts.benchmark.constants import (
-    ANSWER_KEYS,
-    CHOICE_KEYS,
-    CHOICE_PROBABILITY_KEYS,
-    CODE_REFERENCE_PATTERN,
-    EXPLANATION_KEYS,
-    ID_KEYS,
-    IMAGE_PATH_PATTERN,
-    JOINT_PROBABILITY_KEYS,
-    MAX_CHOICE_COUNT,
-    MAX_PROMPT_CHARS,
-    MIN_CHOICE_COUNT,
-    QUESTION_KEYS,
-    QUESTION_PROBABILITY_KEYS,
-    SUPPLEMENTAL_PROMPT_KEYS,
-    VISUAL_REFERENCE_PATTERN,
-)
+try:
+    from scripts.benchmark.constants import (
+        ANSWER_KEYS,
+        CHOICE_KEYS,
+        CHOICE_PROBABILITY_KEYS,
+        CODE_REFERENCE_PATTERN,
+        EXPLANATION_KEYS,
+        ID_KEYS,
+        IMAGE_PATH_PATTERN,
+        JOINT_PROBABILITY_KEYS,
+        MAX_CHOICE_COUNT,
+        MAX_PROMPT_CHARS,
+        MIN_CHOICE_COUNT,
+        QUESTION_KEYS,
+        QUESTION_PROBABILITY_KEYS,
+        SUPPLEMENTAL_PROMPT_KEYS,
+        VISUAL_REFERENCE_PATTERN,
+    )
+except ModuleNotFoundError:
+    from benchmark.constants import (
+        ANSWER_KEYS,
+        CHOICE_KEYS,
+        CHOICE_PROBABILITY_KEYS,
+        CODE_REFERENCE_PATTERN,
+        EXPLANATION_KEYS,
+        ID_KEYS,
+        IMAGE_PATH_PATTERN,
+        JOINT_PROBABILITY_KEYS,
+        MAX_CHOICE_COUNT,
+        MAX_PROMPT_CHARS,
+        MIN_CHOICE_COUNT,
+        QUESTION_KEYS,
+        QUESTION_PROBABILITY_KEYS,
+        SUPPLEMENTAL_PROMPT_KEYS,
+        VISUAL_REFERENCE_PATTERN,
+    )
 
 
 @dataclass

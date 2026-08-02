@@ -52,6 +52,7 @@ CHOICE_PROBABILITY_KEYS = ("choice_probabilities", "choice_probability", "py", "
 
 VISUAL_REFERENCE_PATTERN = re.compile(
     r"\b(?:"
+    r"the\s+figure\s+shows|figure\s+shows|"
     r"this\s+image|in\s+the\s+image|shown\s+in\s+the\s+image|"
     r"this\s+diagram|in\s+the\s+diagram|shown\s+below|shown\s+above|"
     r"following\s+image|following\s+diagram|the\s+image\s+below|the\s+diagram\s+below|"

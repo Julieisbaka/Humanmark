@@ -1,6 +1,11 @@
 # Environment variables
 .env
 
+# Generated data
+gpqa_diamond.json
+humanitys_last_exam.json
+mmlu_pro.json
+
 # Python
 __pycache__/
 *.pyc
