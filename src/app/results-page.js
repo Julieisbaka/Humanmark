@@ -1,5 +1,5 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
-import { DEFAULT_LEADERBOARD_LIMIT, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
+import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
 const LEADERBOARD_CONTEXT_WINDOW = 5;
@@ -235,28 +235,31 @@ export async function renderResults(appData) {
 			<div class="review-list">
 				${state.score.reviewedQuestions
 					.map((question, index) => {
+						const promptText = stripDuplicatedChoiceLines(question.prompt, question.choices);
 						const explanation = question.explanation ?? question.answerExplanation ?? question.rationale ?? question.solution ?? question.analysis ?? '';
 						const explanationMarkup = String(explanation).trim()
 							? `<details class="review-explanation"><summary><span class="eyebrow">Benchmark explanation</span><span class="review-explanation-toggle">Show explanation</span></summary><div class="markdown-content">${renderMarkdown(explanation)}</div></details>`
 							: '';
 						const mediaMarkup = renderImageGallery(question.media, 'review-media');
 						const selected = question.selectedIndex === null ? 'No answer selected' : question.choices[question.selectedIndex];
+						const selectedText = String(selected ?? '');
+						const correctText = String(question.choices[question.answerIndex] ?? '');
 
 						return `
 							<section class="review-item ${question.isCorrect ? 'review-item--correct' : 'review-item--wrong'}">
 								<div>
 									<p class="eyebrow">Question ${index + 1}</p>
-									<div class="markdown-content review-prompt">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
+									<div class="markdown-content review-prompt content-truncate content-truncate--question" title="${escapeAttribute(promptText)}">${renderMarkdown(promptText)}</div>
 									${mediaMarkup}
 								</div>
 								<dl class="stats-grid stats-grid--compact">
 									<div>
 										<dt>Your answer</dt>
-										<dd>${renderInlineMarkdown(selected)}</dd>
+										<dd><span class="review-answer-text content-truncate content-truncate--answer" title="${escapeAttribute(selectedText)}">${renderInlineMarkdown(selected)}</span></dd>
 									</div>
 									<div>
 										<dt>Correct answer</dt>
-										<dd>${renderInlineMarkdown(question.choices[question.answerIndex])}</dd>
+										<dd><span class="review-answer-text content-truncate content-truncate--answer" title="${escapeAttribute(correctText)}">${renderInlineMarkdown(question.choices[question.answerIndex])}</span></dd>
 									</div>
 								</dl>
 								${explanationMarkup}

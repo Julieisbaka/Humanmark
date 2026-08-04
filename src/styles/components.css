@@ -98,6 +98,25 @@
 	word-break: break-word;
 }
 
+.content-truncate {
+	display: -webkit-box;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+	word-break: break-word;
+}
+
+.content-truncate[title] {
+	cursor: help;
+}
+
+.content-truncate--question {
+	-webkit-line-clamp: 6;
+}
+
+.content-truncate--answer {
+	-webkit-line-clamp: 2;
+}
+
 .question-media,
 .review-media {
 	display: grid;
@@ -440,4 +459,8 @@
 
 .review-explanation > .markdown-content {
 	margin-top: 12px;
+}
+
+.review-answer-text {
+	display: block;
 }

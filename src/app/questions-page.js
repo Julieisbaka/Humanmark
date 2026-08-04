@@ -125,13 +125,14 @@ export async function renderQuestions(appData) {
 				.map(
 					(question, index) => {
 						const crossedOut = new Set(draftCrossedOutChoices[question.id] ?? []);
+						const promptText = stripDuplicatedChoiceLines(question.prompt, question.choices);
 						const mediaMarkup = renderImageGallery(question.media, 'question-media');
 
 						return `
 							<fieldset class="question-card">
 								<legend>
 									<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
-									<div class="question-prompt markdown-content">${renderMarkdown(stripDuplicatedChoiceLines(question.prompt, question.choices))}</div>
+									<div class="question-prompt markdown-content content-truncate content-truncate--question" title="${escapeAttribute(promptText)}">${renderMarkdown(promptText)}</div>
 									${mediaMarkup}
 								</legend>
 								<div class="choice-list">
@@ -149,7 +150,7 @@ export async function renderQuestions(appData) {
 																value="${choiceIndex}"
 																${draftAnswers?.[question.id] === choiceIndex ? 'checked' : ''}
 															/>
-															<span class="choice-text">${renderInlineMarkdown(choice)}</span>
+																<span class="choice-text content-truncate content-truncate--answer" title="${escapeAttribute(String(choice ?? ''))}">${renderInlineMarkdown(choice)}</span>
 														</label>
 														<button
 															type="button"
