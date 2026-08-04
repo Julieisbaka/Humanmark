@@ -39,6 +39,20 @@ export async function renderQuestions(appData) {
 		return;
 	}
 
+	if (!Array.isArray(benchmark.questions) || benchmark.questions.length === 0) {
+		status.textContent = `${benchmark.name} · unavailable`;
+		container.innerHTML = `
+			<article class="panel panel--soft">
+				<p class="eyebrow">Questions unavailable</p>
+				<p>We couldn\'t load the full question set for this benchmark right now.</p>
+				<div class="actions-row">
+					<a class="button button--ghost" href="index.html">Return home</a>
+				</div>
+			</article>
+		`;
+		return;
+	}
+
 	const selectedQuestions = benchmark.questions
 		.filter((question) => state.questionIds.includes(question.id))
 		.map((question) => sortQuestionChoicesForHumans(question, sortNumericChoices));

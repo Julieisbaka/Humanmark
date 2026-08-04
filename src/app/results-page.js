@@ -18,7 +18,8 @@ export async function renderResults(appData) {
 		return;
 	}
 
-	const selectedQuestions = benchmark.questions.filter((question) => state.questionIds.includes(question.id));
+	const benchmarkQuestions = Array.isArray(benchmark.questions) ? benchmark.questions : [];
+	const selectedQuestions = benchmarkQuestions.filter((question) => state.questionIds.includes(question.id));
 	const currentModels = state.currentModels ?? getModels(benchmark.id, appData.currentScores);
 	const comparisons = compareAgainstModels(state.score, currentModels);
 	const userLeaderboard = buildLeaderboard(state.score, currentModels);

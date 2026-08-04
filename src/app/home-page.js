@@ -45,7 +45,8 @@ export function renderHome(appData) {
 		}
 	};
 
-	const renderPreview = (benchmark) => {
+	const renderPreview = (benchmark, options = {}) => {
+		const detailLoadFailed = Boolean(options.detailLoadFailed);
 		const currentModels = getModels(benchmark.id, currentScores);
 		const topCurrent = getTopModel(currentModels);
 
@@ -54,6 +55,7 @@ export function renderHome(appData) {
 				<p class="eyebrow">Selected benchmark</p>
 				<h2>${benchmark.name}</h2>
 				<p>${benchmark.description}</p>
+				${detailLoadFailed ? '<p class="eyebrow">Detailed benchmark data could not be loaded right now. Showing index metadata only.</p>' : ''}
 				<dl class="stats-grid">
 					<div>
 						<dt>Question pool</dt>
@@ -108,8 +110,9 @@ export function renderHome(appData) {
 		renderPreview(benchmark);
 
 		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+		const detailLoadFailed = benchmarkDetails === benchmark || !Array.isArray(benchmarkDetails?.questions);
 		renderQuestionCounts(benchmarkDetails ?? benchmark);
-		renderPreview(benchmarkDetails ?? benchmark);
+		renderPreview(benchmarkDetails ?? benchmark, { detailLoadFailed });
 	};
 
 	benchmarkSelect.addEventListener('change', () => {
