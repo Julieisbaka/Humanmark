@@ -49,3 +49,17 @@ test('renderInlineMarkdown auto-wraps bare \\mathbb{R}', () => {
 
 	assert.ok(html.includes('\\(\\mathbb{R}\\)'));
 });
+
+test('renderInlineMarkdown does not wrap incomplete argument-required commands', () => {
+	const html = renderInlineMarkdown('Velocity vector is \\vec{v} and not just \\vec.');
+
+	assert.ok(html.includes('\\(\\vec{v}\\)'));
+	assert.ok(!html.includes('\\(\\vec\\)'));
+});
+
+test('renderInlineMarkdown recognizes bare \\dfrac expressions', () => {
+	const html = renderInlineMarkdown('V(\\vec{r},t) = \\dfrac{qc}{4\\pi\\epsilon_0(d c - \\vec{d}\\cdot\\vec{v})}');
+
+	assert.ok(html.includes('\\dfrac{qc}{4\\pi\\epsilon_0(d c - \\vec{d}\\cdot\\vec{v})}'));
+	assert.ok(!html.includes('\\(\\vec\\)'));
+});

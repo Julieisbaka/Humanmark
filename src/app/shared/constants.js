@@ -88,6 +88,9 @@ export const MEASUREMENT_UNITS = new Map([
 
 export const BARE_LATEX_COMMANDS = new Set([
 	'frac',
+	'dfrac',
+	'tfrac',
+	'cfrac',
 	'sqrt',
 	'cdot',
 	'times',

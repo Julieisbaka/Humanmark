@@ -152,11 +152,39 @@ function restoreMathSegments(value, tokens) {
 
 function injectBareLatexDelimiters(value) {
 	const { protectedText, tokens } = shieldMathSegments(String(value));
+	const nestedBraceGroup = String.raw`\{(?:[^{}]|\{[^{}]*\})*\}`;
+	const argumentRequiredCommands = new Set([
+		'frac',
+		'dfrac',
+		'tfrac',
+		'cfrac',
+		'sqrt',
+		'mathrm',
+		'mathbf',
+		'mathbb',
+		'text',
+		'overline',
+		'underline',
+		'hat',
+		'bar',
+		'vec',
+	]);
 
-	const commandPattern = /\\([A-Za-z]+)(?:\s*\{[^{}]*\}|\s*\[[^\]]*\]|\s*[_^]\s*\{[^{}]*\}|\s*[_^]\s*[A-Za-z0-9]|\s*[A-Za-z0-9])*/g;
+	const commandPattern = new RegExp(
+		String.raw`\\([A-Za-z]+)(?:\s*${nestedBraceGroup}|\s*\[[^\]]*\]|\s*[_^]\s*${nestedBraceGroup}|\s*[_^]\s*[A-Za-z0-9]|\s*\d+(?:\.\d+)*)*`,
+		'g',
+	);
 	const normalized = protectedText.replace(commandPattern, (match, command, offset, fullText) => {
-		if (!BARE_LATEX_COMMANDS.has(String(command).toLowerCase())) {
+		const normalizedCommand = String(command).toLowerCase();
+		if (!BARE_LATEX_COMMANDS.has(normalizedCommand)) {
 			return match;
+		}
+
+		if (argumentRequiredCommands.has(normalizedCommand)) {
+			const trailing = match.slice(command.length + 1);
+			if (!/[{\[]/.test(trailing)) {
+				return match;
+			}
 		}
 
 		const before = offset > 0 ? fullText[offset - 1] : '';
@@ -237,10 +265,8 @@ function normalizeMathInput(value) {
 
 	const { protectedText, tokens } = shieldMathSegments(prepared);
 
-	const normalizedText = injectBareMathSequences(
-		injectBareLatexDelimiters(
-			normalizeMathText(protectedText),
-		),
+	const normalizedText = injectBareLatexDelimiters(
+		normalizeMathText(protectedText),
 	);
 
 	return normalizeDisplayMathContent(restoreMathSegments(normalizedText, tokens));
