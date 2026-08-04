@@ -1,9 +1,13 @@
 export {
+	DEFAULT_LEADERBOARD_LIMIT,
+	MAX_LEADERBOARD_LIMIT,
+	MIN_LEADERBOARD_LIMIT,
 	MAX_QUESTIONS_PER_PAGE,
 	MIN_QUESTIONS_PER_PAGE,
 } from './shared/constants.js';
 
 export {
+	clampLeaderboardLimit,
 	clampQuestionsPerPage,
 	loadSettings,
 	saveSettings,

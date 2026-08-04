@@ -1,11 +1,14 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
-import { escapeHtml, loadBenchmarkDetails, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
+import { DEFAULT_LEADERBOARD_LIMIT, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
-const DEFAULT_LEADERBOARD_LIMIT = 50;
 const LEADERBOARD_CONTEXT_WINDOW = 5;
 
 export async function renderResults(appData) {
+	const settings = loadSettings();
+	const leaderboardLimit = Number.isFinite(settings?.leaderboardLimit)
+		? settings.leaderboardLimit
+		: DEFAULT_LEADERBOARD_LIMIT;
 	const state = getState();
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const summary = document.querySelector('[data-role="result-summary"]');
@@ -112,7 +115,7 @@ export async function renderResults(appData) {
 
 	const getDefaultVisibleRows = () => {
 		const visibleRowIndexes = new Set();
-		const maxTopRows = Math.min(DEFAULT_LEADERBOARD_LIMIT, userLeaderboard.length);
+		const maxTopRows = Math.min(leaderboardLimit, userLeaderboard.length);
 
 		for (let index = 0; index < maxTopRows; index += 1) {
 			visibleRowIndexes.add(index);
@@ -167,7 +170,7 @@ export async function renderResults(appData) {
 
 		if (leaderboardSummary) {
 			if (useDefaultLimit && hiddenDefaultCount > 0) {
-				leaderboardSummary.textContent = `Showing the top ${Math.min(DEFAULT_LEADERBOARD_LIMIT, userLeaderboard.length)} models and ${LEADERBOARD_CONTEXT_WINDOW} models around your rank. ${hiddenDefaultCount} more row${hiddenDefaultCount === 1 ? '' : 's'} are hidden.`;
+				leaderboardSummary.textContent = `Showing the top ${Math.min(leaderboardLimit, userLeaderboard.length)} models and ${LEADERBOARD_CONTEXT_WINDOW} models around your rank. ${hiddenDefaultCount} more row${hiddenDefaultCount === 1 ? '' : 's'} are hidden.`;
 			} else {
 				leaderboardSummary.textContent = `${rowsToRender.length} row${rowsToRender.length === 1 ? '' : 's'} shown.`;
 			}

@@ -4,6 +4,9 @@ export const SETTINGS_KEY = 'humanmark-settings';
 export const DEFAULT_QUESTIONS_PER_PAGE = 5;
 export const MIN_QUESTIONS_PER_PAGE = 1;
 export const MAX_QUESTIONS_PER_PAGE = 20;
+export const DEFAULT_LEADERBOARD_LIMIT = 50;
+export const MIN_LEADERBOARD_LIMIT = 1;
+export const MAX_LEADERBOARD_LIMIT = 500;
 export const DEFAULT_SORT_NUMERIC_CHOICES = true;
 
 export const CURRENCY_PREFIXES = new Set(['$', '€', '£', '¥', '₹', '₩', '₽', '₺', '₫', '₱', '₪', 'usd', 'eur', 'gbp', 'jpy', 'aud', 'cad', 'cny', 'inr']);
