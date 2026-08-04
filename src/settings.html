@@ -39,6 +39,7 @@
                         step='1'
                         inputmode='numeric'
                     />
+                    <small class='field-help'>Controls how many questions appear per page while taking a benchmark.</small>
                 </label>
 
                 <label class='field'>
@@ -51,6 +52,7 @@
                         step='1'
                         inputmode='numeric'
                     />
+                    <small class='field-help'>Shows this many top models before collapsing the rest behind “Show more models”.</small>
                 </label>
 
                 <label class='field field-toggle'>
@@ -60,9 +62,11 @@
                     />
                     <span>Sort numeric/percent answer choices from least to greatest</span>
                 </label>
+                <small class='field-help'>Only applies when all choices are numeric-style values (like percentages or amounts).</small>
 
                 <div class='actions-row'>
-                    <button class='button' type='submit'>Save settings</button>
+                    <button class='button' type='submit' data-role='settings-save'>Save settings</button>
+                    <button class='button button--ghost' type='button' data-role='settings-reset'>Reset to defaults</button>
                 </div>
 
                 <p data-role='settings-status' aria-live='polite'></p>
