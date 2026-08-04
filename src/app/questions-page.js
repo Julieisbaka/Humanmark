@@ -59,6 +59,7 @@ export async function renderQuestions(appData) {
 	const totalPages = Math.max(1, Math.ceil(selectedQuestions.length / questionsPerPage));
 	let currentPage = Math.min(Math.max(Number(state.currentQuestionPage ?? 1), 1), totalPages);
 	let draftAnswers = { ...(state.answers ?? {}) };
+	let pendingCrossoutSaveTimer = null;
 
 	const pageWindow = () => {
 		const start = (currentPage - 1) * questionsPerPage;
@@ -77,6 +78,37 @@ export async function renderQuestions(appData) {
 
 	const scrollToPageStart = () => {
 		status.scrollIntoView({ block: 'start', behavior: 'auto' });
+	};
+
+	const scheduleCrossoutSave = () => {
+		if (pendingCrossoutSaveTimer !== null) {
+			window.clearTimeout(pendingCrossoutSaveTimer);
+		}
+
+		pendingCrossoutSaveTimer = window.setTimeout(() => {
+			pendingCrossoutSaveTimer = null;
+			saveState({
+				...state,
+				answers: draftAnswers,
+				crossedOutChoices: draftCrossedOutChoices,
+				currentQuestionPage: currentPage,
+			});
+		}, 150);
+	};
+
+	const flushPendingCrossoutSave = () => {
+		if (pendingCrossoutSaveTimer === null) {
+			return;
+		}
+
+		window.clearTimeout(pendingCrossoutSaveTimer);
+		pendingCrossoutSaveTimer = null;
+		saveState({
+			...state,
+			answers: draftAnswers,
+			crossedOutChoices: draftCrossedOutChoices,
+			currentQuestionPage: currentPage,
+		});
 	};
 
 	const renderPage = () => {
@@ -153,44 +185,8 @@ export async function renderQuestions(appData) {
 		const form = container.querySelector('[data-role="question-form"]');
 		const prevButton = container.querySelector('[data-role="prev-page"]');
 		const nextButton = container.querySelector('[data-role="next-page"]');
-		const crossoutButtons = container.querySelectorAll('[data-role="choice-crossout-toggle"]');
-
-		crossoutButtons.forEach((button) => {
-			button.addEventListener('click', () => {
-				collectCurrentPageResponses();
-				const questionId = button.dataset.questionId;
-				const choiceIndex = Number(button.dataset.choiceIndex);
-
-				if (!questionId || !Number.isInteger(choiceIndex)) {
-					return;
-				}
-
-				const existing = new Set(draftCrossedOutChoices[questionId] ?? []);
-				if (existing.has(choiceIndex)) {
-					existing.delete(choiceIndex);
-				} else {
-					existing.add(choiceIndex);
-				}
-
-				const nextCrossedOutChoices = { ...draftCrossedOutChoices };
-				if (existing.size) {
-					nextCrossedOutChoices[questionId] = [...existing].sort((left, right) => left - right);
-				} else {
-					delete nextCrossedOutChoices[questionId];
-				}
-
-				draftCrossedOutChoices = nextCrossedOutChoices;
-				saveState({
-					...state,
-					answers: draftAnswers,
-					crossedOutChoices: draftCrossedOutChoices,
-					currentQuestionPage: currentPage,
-				});
-				renderPage();
-			});
-		});
-
 		prevButton?.addEventListener('click', () => {
+			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
 			currentPage = Math.max(1, currentPage - 1);
 			saveState({
@@ -204,6 +200,7 @@ export async function renderQuestions(appData) {
 		});
 
 		nextButton?.addEventListener('click', () => {
+			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
 			currentPage = Math.min(totalPages, currentPage + 1);
 			saveState({
@@ -218,6 +215,7 @@ export async function renderQuestions(appData) {
 
 		form?.addEventListener('submit', (event) => {
 			event.preventDefault();
+			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
 
 			const score = scoreBenchmark(benchmark, selectedQuestions, draftAnswers);
@@ -238,6 +236,44 @@ export async function renderQuestions(appData) {
 
 		renderMathIn(container);
 	};
+
+	container.addEventListener('click', (event) => {
+		const target = event.target;
+		if (!target || typeof target.closest !== 'function') {
+			return;
+		}
+
+		const button = target.closest('[data-role="choice-crossout-toggle"]');
+		if (!button || !container.contains(button)) {
+			return;
+		}
+
+		collectCurrentPageResponses();
+		const questionId = button.dataset.questionId;
+		const choiceIndex = Number(button.dataset.choiceIndex);
+
+		if (!questionId || !Number.isInteger(choiceIndex)) {
+			return;
+		}
+
+		const existing = new Set(draftCrossedOutChoices[questionId] ?? []);
+		if (existing.has(choiceIndex)) {
+			existing.delete(choiceIndex);
+		} else {
+			existing.add(choiceIndex);
+		}
+
+		const nextCrossedOutChoices = { ...draftCrossedOutChoices };
+		if (existing.size) {
+			nextCrossedOutChoices[questionId] = [...existing].sort((left, right) => left - right);
+		} else {
+			delete nextCrossedOutChoices[questionId];
+		}
+
+		draftCrossedOutChoices = nextCrossedOutChoices;
+		scheduleCrossoutSave();
+		renderPage();
+	});
 
 	renderPage();
 }

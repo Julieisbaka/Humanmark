@@ -133,6 +133,9 @@ export async function renderResults(appData) {
 		return userLeaderboard.filter((_, index) => visibleRowIndexes.has(index));
 	};
 
+	const defaultVisibleRows = getDefaultVisibleRows();
+	const defaultHiddenRowCount = Math.max(0, userLeaderboard.length - defaultVisibleRows.length);
+
 	const renderLeaderboardRows = () => {
 		const query = String(leaderboardSearch?.value ?? '').trim().toLowerCase();
 		const filterValue = String(leaderboardFilter?.value ?? 'all');
@@ -163,24 +166,22 @@ export async function renderResults(appData) {
 			return comparison?.verdict === filterValue;
 		});
 
-		const limitedRows = getDefaultVisibleRows();
 		const useDefaultLimit = !showAllLeaderboardRows && !query && filterValue === 'all';
-		const rowsToRender = useDefaultLimit ? limitedRows : filteredRows;
-		const hiddenDefaultCount = Math.max(0, userLeaderboard.length - limitedRows.length);
+		const rowsToRender = useDefaultLimit ? defaultVisibleRows : filteredRows;
 
 		if (leaderboardSummary) {
-			if (useDefaultLimit && hiddenDefaultCount > 0) {
-				leaderboardSummary.textContent = `Showing the top ${Math.min(leaderboardLimit, userLeaderboard.length)} models and ${LEADERBOARD_CONTEXT_WINDOW} models around your rank. ${hiddenDefaultCount} more row${hiddenDefaultCount === 1 ? '' : 's'} are hidden.`;
+			if (useDefaultLimit && defaultHiddenRowCount > 0) {
+				leaderboardSummary.textContent = `Showing the top ${Math.min(leaderboardLimit, userLeaderboard.length)} models and ${LEADERBOARD_CONTEXT_WINDOW} models around your rank. ${defaultHiddenRowCount} more row${defaultHiddenRowCount === 1 ? '' : 's'} are hidden.`;
 			} else {
 				leaderboardSummary.textContent = `${rowsToRender.length} row${rowsToRender.length === 1 ? '' : 's'} shown.`;
 			}
 		}
 
 		if (leaderboardActions && leaderboardShowMore) {
-			const shouldShowAction = useDefaultLimit && hiddenDefaultCount > 0;
+			const shouldShowAction = useDefaultLimit && defaultHiddenRowCount > 0;
 			leaderboardActions.hidden = !shouldShowAction;
 			leaderboardShowMore.textContent = shouldShowAction
-				? `Show more models (${hiddenDefaultCount} hidden)`
+				? `Show more models (${defaultHiddenRowCount} hidden)`
 				: 'Show more models';
 		}
 

@@ -1,9 +1,30 @@
 import { getBenchmarkModels, loadState } from '../score.js';
 import { loadJSON, resolveDataRoot } from './shared.js';
+import { logAppError, logAppEvent, logAppWarning } from './shared/telemetry.js';
 
 export async function loadAppData() {
-	const { dataRoot, benchmarksData } = await resolveDataRoot();
-	const currentScores = await loadJSON(`${dataRoot}/scores/current.json`).catch(() => ({ benchmarks: {} }));
+	let dataRoot;
+	let benchmarksData;
+
+	try {
+		({ dataRoot, benchmarksData } = await resolveDataRoot());
+	} catch (error) {
+		logAppError('appData.load.failedAtDataRoot', error);
+		throw error;
+	}
+
+	const currentScores = await loadJSON(`${dataRoot}/scores/current.json`).catch((error) => {
+		logAppWarning('appData.load.currentScoresFallback', {
+			dataRoot,
+			error: error instanceof Error ? error.message : String(error),
+		});
+		return { benchmarks: {} };
+	});
+
+	logAppEvent('appData.load.success', {
+		dataRoot,
+		benchmarkCount: Array.isArray(benchmarksData?.benchmarks) ? benchmarksData.benchmarks.length : null,
+	});
 
 	return {
 		dataRoot,

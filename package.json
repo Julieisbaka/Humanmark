@@ -5,10 +5,11 @@
     "type": "module",
     "scripts": {
         "test": "npm run test:js && npm run test:python",
-        "test:js": "node --test tests/markdown_parser.test.mjs tests/questions_parser.test.mjs",
+        "test:js": "node --test tests/markdown_parser.test.mjs tests/questions_parser.test.mjs tests/page_smoke.test.mjs",
         "test:python": "c:/Users/caspe/Desktop/Humanmark/.venv-1/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\""
     },
     "devDependencies": {
-        "eslint": "^10.8.0"
+        "eslint": "^10.8.0",
+        "jsdom": "^26.1.0"
     }
 }

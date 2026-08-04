@@ -125,6 +125,7 @@ export const BARE_LATEX_COMMANDS = new Set([
 	'cot',
 	'mathrm',
 	'mathbf',
+	'mathbb',
 	'text',
 	'left',
 	'right',

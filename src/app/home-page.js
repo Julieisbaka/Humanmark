@@ -99,7 +99,10 @@ export function renderHome(appData) {
 		benchmarkSelect.appendChild(option);
 	});
 
+	let latestSelectionToken = 0;
+
 	const applySelection = async () => {
+		const token = ++latestSelectionToken;
 		const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
 
 		if (!benchmark) {
@@ -110,6 +113,10 @@ export function renderHome(appData) {
 		renderPreview(benchmark);
 
 		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
+		if (token !== latestSelectionToken) {
+			return;
+		}
+
 		const detailLoadFailed = benchmarkDetails === benchmark || !Array.isArray(benchmarkDetails?.questions);
 		renderQuestionCounts(benchmarkDetails ?? benchmark);
 		renderPreview(benchmarkDetails ?? benchmark, { detailLoadFailed });

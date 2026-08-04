@@ -43,3 +43,9 @@ test('renderInlineMarkdown auto-wraps bare \\rho but not \\AA', () => {
 	assert.ok(html.includes('\\(\\rho\\)'));
 	assert.ok(!html.includes('\\(\\AA\\)'));
 });
+
+test('renderInlineMarkdown auto-wraps bare \\mathbb{R}', () => {
+	const html = renderInlineMarkdown('Correct answer is \\mathbb{R}.');
+
+	assert.ok(html.includes('\\(\\mathbb{R}\\)'));
+});
