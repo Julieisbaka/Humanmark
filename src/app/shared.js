@@ -30,6 +30,7 @@ export {
 
 export {
 	stripDuplicatedChoiceLines,
+	numberStandaloneBulletLists,
 } from './shared/questions.js';
 
 export {

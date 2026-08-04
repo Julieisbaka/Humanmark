@@ -110,7 +110,7 @@
 }
 
 .content-truncate--question {
-	-webkit-line-clamp: 6;
+	-webkit-line-clamp: 10;
 }
 
 .content-truncate--answer {

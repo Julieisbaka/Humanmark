@@ -46,3 +46,34 @@ export function stripDuplicatedChoiceLines(prompt, choices) {
 
 	return filteredLines.join('\n');
 }
+
+export function numberStandaloneBulletLists(prompt) {
+	if (!prompt) {
+		return '';
+	}
+
+	return String(prompt)
+		.split(/\n{2,}/)
+		.map((block) => {
+			const lines = block.split(/\r?\n/);
+			const nonEmptyLines = lines.filter((line) => line.trim());
+
+			if (!nonEmptyLines.length || !nonEmptyLines.every((line) => /^\s*[-*]\s+/.test(line))) {
+				return block;
+			}
+
+			let index = 1;
+			return lines
+				.map((line) => {
+					if (!/^\s*[-*]\s+/.test(line)) {
+						return line;
+					}
+
+					const numberedLine = line.replace(/^\s*[-*]\s+/, `${index}. `);
+					index += 1;
+					return numberedLine;
+				})
+				.join('\n');
+		})
+		.join('\n\n');
+}

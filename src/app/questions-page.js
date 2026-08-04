@@ -1,5 +1,5 @@
 import { scoreBenchmark } from '../score.js';
-import { escapeAttribute, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, sortQuestionChoicesForHumans, stripDuplicatedChoiceLines, summarizeToolPolicy, clampQuestionsPerPage } from './shared.js';
+import { escapeAttribute, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, sortQuestionChoicesForHumans, stripDuplicatedChoiceLines, numberStandaloneBulletLists, summarizeToolPolicy, clampQuestionsPerPage } from './shared.js';
 import { getModels, getState } from './runtime.js';
 import { saveState } from '../score.js';
 
@@ -125,7 +125,7 @@ export async function renderQuestions(appData) {
 				.map(
 					(question, index) => {
 						const crossedOut = new Set(draftCrossedOutChoices[question.id] ?? []);
-						const promptText = stripDuplicatedChoiceLines(question.prompt, question.choices);
+						const promptText = numberStandaloneBulletLists(stripDuplicatedChoiceLines(question.prompt, question.choices));
 						const mediaMarkup = renderImageGallery(question.media, 'question-media');
 
 						return `

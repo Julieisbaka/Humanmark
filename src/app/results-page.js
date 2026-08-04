@@ -1,5 +1,5 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
-import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
+import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines, numberStandaloneBulletLists } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
 const LEADERBOARD_CONTEXT_WINDOW = 5;
@@ -235,7 +235,7 @@ export async function renderResults(appData) {
 			<div class="review-list">
 				${state.score.reviewedQuestions
 					.map((question, index) => {
-						const promptText = stripDuplicatedChoiceLines(question.prompt, question.choices);
+						const promptText = numberStandaloneBulletLists(stripDuplicatedChoiceLines(question.prompt, question.choices));
 						const explanation = question.explanation ?? question.answerExplanation ?? question.rationale ?? question.solution ?? question.analysis ?? '';
 						const explanationMarkup = String(explanation).trim()
 							? `<details class="review-explanation"><summary><span class="eyebrow">Benchmark explanation</span><span class="review-explanation-toggle">Show explanation</span></summary><div class="markdown-content">${renderMarkdown(explanation)}</div></details>`
