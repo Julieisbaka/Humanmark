@@ -104,12 +104,18 @@ export function renderHome(appData) {
 			return;
 		}
 
+		renderQuestionCounts(benchmark);
+		renderPreview(benchmark);
+
 		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
 		renderQuestionCounts(benchmarkDetails ?? benchmark);
 		renderPreview(benchmarkDetails ?? benchmark);
 	};
 
-	benchmarkSelect.addEventListener('change', applySelection);
+	benchmarkSelect.addEventListener('change', () => {
+		void applySelection();
+	});
+
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
 

@@ -2,7 +2,7 @@ import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, form
 import { escapeHtml, loadBenchmarkDetails, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
-const DEFAULT_LEADERBOARD_LIMIT = 100;
+const DEFAULT_LEADERBOARD_LIMIT = 50;
 const LEADERBOARD_CONTEXT_WINDOW = 5;
 
 export async function renderResults(appData) {
@@ -262,6 +262,22 @@ export async function renderResults(appData) {
 			</div>
 		</article>
 	`;
+
+	const syncExplanationToggle = (detailsElement) => {
+		const toggleLabel = detailsElement.querySelector('.review-explanation-toggle');
+		if (!toggleLabel) {
+			return;
+		}
+
+		toggleLabel.textContent = detailsElement.open ? 'Hide explanation' : 'Show explanation';
+	};
+
+	review.querySelectorAll('.review-explanation').forEach((detailsElement) => {
+		syncExplanationToggle(detailsElement);
+		detailsElement.addEventListener('toggle', () => {
+			syncExplanationToggle(detailsElement);
+		});
+	});
 
 	renderMathIn(review);
 }
