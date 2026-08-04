@@ -16,11 +16,15 @@ export async function loadJSON(relativePath) {
 
 export async function resolveDataRoot() {
 	for (const candidate of DATA_ROOT_CANDIDATES) {
+		const startedAt = Date.now();
 		try {
 			const benchmarksData = await loadJSON(`${candidate}/benchmarks/index.json`);
 			logAppEvent('dataRoot.resolve.success', {
+				scope: 'dataRoot',
+				outcome: 'success',
 				candidate,
 				benchmarkCount: Array.isArray(benchmarksData?.benchmarks) ? benchmarksData.benchmarks.length : null,
+				durationMs: Date.now() - startedAt,
 			});
 			return {
 				dataRoot: candidate,
@@ -28,13 +32,18 @@ export async function resolveDataRoot() {
 			};
 		} catch (error) {
 			logAppWarning('dataRoot.resolve.candidateFailed', {
+				scope: 'dataRoot',
+				outcome: 'candidate_failed',
 				candidate,
 				error: error instanceof Error ? error.message : String(error),
+				durationMs: Date.now() - startedAt,
 			});
 		}
 	}
 
 	logAppError('dataRoot.resolve.failed', new Error('Failed to resolve benchmark data path.'), {
+		scope: 'dataRoot',
+		outcome: 'error',
 		candidatesTried: DATA_ROOT_CANDIDATES,
 	});
 	throw new Error('Failed to resolve benchmark data path.');
@@ -54,6 +63,8 @@ export async function loadBenchmarkDetails(appData, benchmarkId) {
 	const cacheKey = `${appData.dataRoot}/benchmarks/${benchmarkMeta.file}`;
 	if (benchmarkDetailsCache.has(cacheKey)) {
 		logAppEvent('benchmarkDetails.load.cacheHit', {
+			scope: 'benchmarkDetails',
+			outcome: 'cache_hit',
 			benchmarkId,
 			file: benchmarkMeta.file,
 		});
@@ -65,11 +76,15 @@ export async function loadBenchmarkDetails(appData, benchmarkId) {
 	}
 
 	const loadTask = (async () => {
+		const startedAt = Date.now();
 		try {
 			const benchmarkData = await loadJSON(cacheKey);
 			logAppEvent('benchmarkDetails.load.success', {
+				scope: 'benchmarkDetails',
+				outcome: 'success',
 				benchmarkId,
 				file: benchmarkMeta.file,
+				durationMs: Date.now() - startedAt,
 			});
 			const merged = {
 				...benchmarkMeta,
@@ -79,9 +94,12 @@ export async function loadBenchmarkDetails(appData, benchmarkId) {
 			return merged;
 		} catch (error) {
 			logAppWarning('benchmarkDetails.load.fallbackToMeta', {
+				scope: 'benchmarkDetails',
+				outcome: 'fallback',
 				benchmarkId,
 				file: benchmarkMeta.file,
 				error: error instanceof Error ? error.message : String(error),
+				durationMs: Date.now() - startedAt,
 			});
 			return benchmarkMeta;
 		} finally {

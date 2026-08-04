@@ -1,6 +1,8 @@
 import { formatDate, formatPercent, scoreBenchmark, selectQuestions } from '../score.js';
 import { getBenchmark, loadBenchmarkDetails, renderMathIn, summarizeToolPolicy } from './shared.js';
 import { getModels, getTopModel } from './runtime.js';
+import { createLatestTaskGuard } from './shared/async-guard.js';
+import { logAppEvent, logAppWarning } from './shared/telemetry.js';
 
 export function renderHome(appData) {
 	const benchmarkSelect = document.querySelector('[data-role="benchmark-select"]');
@@ -99,27 +101,45 @@ export function renderHome(appData) {
 		benchmarkSelect.appendChild(option);
 	});
 
-	let latestSelectionToken = 0;
+	const selectionGuard = createLatestTaskGuard();
 
 	const applySelection = async () => {
-		const token = ++latestSelectionToken;
+		const token = selectionGuard.nextToken();
 		const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
 
 		if (!benchmark) {
 			return;
 		}
 
+		logAppEvent('home.selection.start', {
+			scope: 'home',
+			outcome: 'start',
+			benchmarkId: benchmark.id,
+		});
+
 		renderQuestionCounts(benchmark);
 		renderPreview(benchmark);
 
 		const benchmarkDetails = await loadBenchmarkDetails(appData, benchmark.id);
-		if (token !== latestSelectionToken) {
+		if (!selectionGuard.isLatest(token)) {
+			logAppWarning('home.selection.discardedStale', {
+				scope: 'home',
+				outcome: 'discarded',
+				benchmarkId: benchmark.id,
+			});
 			return;
 		}
 
 		const detailLoadFailed = benchmarkDetails === benchmark || !Array.isArray(benchmarkDetails?.questions);
 		renderQuestionCounts(benchmarkDetails ?? benchmark);
 		renderPreview(benchmarkDetails ?? benchmark, { detailLoadFailed });
+
+		logAppEvent('home.selection.complete', {
+			scope: 'home',
+			outcome: detailLoadFailed ? 'fallback' : 'success',
+			benchmarkId: benchmark.id,
+			detailLoadFailed,
+		});
 	};
 
 	benchmarkSelect.addEventListener('change', () => {
@@ -128,6 +148,7 @@ export function renderHome(appData) {
 
 	form.addEventListener('submit', async (event) => {
 		event.preventDefault();
+		selectionGuard.invalidate();
 
 		const benchmark = getBenchmark(benchmarkIndex, benchmarkSelect.value) ?? benchmarkIndex[0];
 		if (!benchmark) {
