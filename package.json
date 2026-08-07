@@ -5,8 +5,8 @@
     "type": "module",
     "scripts": {
         "test": "npm run test:js && npm run test:python",
-        "test:js": "node --test tests/markdown_parser.test.mjs tests/questions_parser.test.mjs tests/page_smoke.test.mjs",
-        "test:python": "c:/Users/caspe/Desktop/Humanmark/.venv-1/Scripts/python.exe -m unittest discover -s tests -p \"test_*.py\""
+        "test:js": "node --test tests/markdown_parser.test.mjs tests/questions_parser.test.mjs tests/page_smoke.test.mjs tests/score_and_shared.test.mjs",
+        "test:python": "c:/Users/caspe/Desktop/Humanmark/.venv-1/Scripts/python.exe scripts/run_python_tests.py"
     },
     "devDependencies": {
         "eslint": "^10.8.0",
