@@ -61,6 +61,16 @@ export async function renderQuestions(appData) {
 	let draftAnswers = { ...(state.answers ?? {}) };
 	let pendingCrossoutSaveTimer = null;
 
+	const persistProgress = (overrides = {}) => {
+		saveState({
+			...state,
+			answers: draftAnswers,
+			crossedOutChoices: draftCrossedOutChoices,
+			currentQuestionPage: currentPage,
+			...overrides,
+		});
+	};
+
 	const pageWindow = () => {
 		const start = (currentPage - 1) * questionsPerPage;
 		const end = start + questionsPerPage;
@@ -87,12 +97,7 @@ export async function renderQuestions(appData) {
 
 		pendingCrossoutSaveTimer = window.setTimeout(() => {
 			pendingCrossoutSaveTimer = null;
-			saveState({
-				...state,
-				answers: draftAnswers,
-				crossedOutChoices: draftCrossedOutChoices,
-				currentQuestionPage: currentPage,
-			});
+			persistProgress();
 		}, 150);
 	};
 
@@ -103,12 +108,7 @@ export async function renderQuestions(appData) {
 
 		window.clearTimeout(pendingCrossoutSaveTimer);
 		pendingCrossoutSaveTimer = null;
-		saveState({
-			...state,
-			answers: draftAnswers,
-			crossedOutChoices: draftCrossedOutChoices,
-			currentQuestionPage: currentPage,
-		});
+		persistProgress();
 	};
 
 	const renderPage = () => {
@@ -190,12 +190,7 @@ export async function renderQuestions(appData) {
 			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
 			currentPage = Math.max(1, currentPage - 1);
-			saveState({
-				...state,
-				answers: draftAnswers,
-				crossedOutChoices: draftCrossedOutChoices,
-				currentQuestionPage: currentPage,
-			});
+			persistProgress();
 			renderPage();
 			scrollToPageStart();
 		});
@@ -204,12 +199,7 @@ export async function renderQuestions(appData) {
 			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
 			currentPage = Math.min(totalPages, currentPage + 1);
-			saveState({
-				...state,
-				answers: draftAnswers,
-				crossedOutChoices: draftCrossedOutChoices,
-				currentQuestionPage: currentPage,
-			});
+			persistProgress();
 			renderPage();
 			scrollToPageStart();
 		});
@@ -222,10 +212,7 @@ export async function renderQuestions(appData) {
 			const score = scoreBenchmark(benchmark, selectedQuestions, draftAnswers);
 			const currentModels = getModels(benchmark.id, appData.currentScores);
 
-			saveState({
-				...state,
-				answers: draftAnswers,
-				crossedOutChoices: draftCrossedOutChoices,
+			persistProgress({
 				currentQuestionPage: 1,
 				completedAt: new Date().toISOString(),
 				score,

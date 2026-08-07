@@ -1,18 +1,15 @@
 """Compatibility facade for benchmark parsing.
 
-This module intentionally remains as the stable entrypoint used by workflows,
-local scripts, and tests. Implementation details now live under
-the package namespace:
-- scripts.benchmark.core
-- scripts.benchmark.io
+This module remains the stable CLI/import entrypoint used by workflows,
+local scripts, and tests, while implementation lives in dedicated modules.
 """
 
 try:
-    from scripts.benchmark.core import ParseStats, parse, save
-    from scripts.benchmark.io import load, main
+    from scripts.benchmark_core import ParseStats, parse, save
+    from scripts.benchmark_io import load, main
 except ModuleNotFoundError:
-    from benchmark.core import ParseStats, parse, save
-    from benchmark.io import load, main
+    from benchmark_core import ParseStats, parse, save
+    from benchmark_io import load, main
 
 __all__ = ["ParseStats", "load", "main", "parse", "save"]
 

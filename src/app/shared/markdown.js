@@ -202,22 +202,6 @@ function injectBareLatexDelimiters(value) {
 	return restoreMathSegments(normalized, tokens);
 }
 
-function injectBareMathSequences(value) {
-	const { protectedText, tokens } = shieldMathSegments(String(value));
-
-	const sequencePattern = /(^|[\s(])([A-Za-z](?:_[A-Za-z0-9{}]+)?(?:\^[A-Za-z0-9{}]+)?(?:\s*[+\-*/=,]\s*|\s+)(?:[A-Za-z](?:_[A-Za-z0-9{}]+)?(?:\^[A-Za-z0-9{}]+)?|\\[A-Za-z]+(?:\s*\{[^{}]*\}|\s*[_^]\s*\{[^{}]*\}|\s*[_^]\s*[A-Za-z0-9])?|\d+(?:\/\d+)?)(?:\s*[+\-*/=,]\s*|\s+)?)+(?!\\\()/g;
-
-	const normalized = protectedText.replace(sequencePattern, (_match, prefix, expression) => {
-		if (!/\\[A-Za-z]+/.test(expression)) {
-			return `${prefix}${expression}`;
-		}
-
-		return `${prefix}\\(${expression.trim()}\\)`;
-	});
-
-	return restoreMathSegments(normalized, tokens);
-}
-
 function renderInlineMarkdownCore(value) {
 	const escaped = escapeHtml(value);
 	return escaped

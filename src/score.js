@@ -49,11 +49,6 @@ export function formatPercent(value, digits = 1) {
 	return `${(value * 100).toFixed(digits)}%`;
 }
 
-export function formatDelta(value, digits = 1) {
-	const prefix = value > 0 ? '+' : '';
-	return `${prefix}${formatPercent(value, digits)}`;
-}
-
 export function formatRank(rank) {
 	const suffix =
 		rank % 10 === 1 && rank % 100 !== 11
@@ -327,8 +322,4 @@ export function loadState() {
 	} catch {
 		return null;
 	}
-}
-
-export function clearState() {
-	window.localStorage.removeItem(STATE_KEY);
 }
