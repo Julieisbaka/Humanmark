@@ -264,7 +264,7 @@ export async function renderResults(appData) {
 									</div>
 									<div>
 										<dt>Correct answer</dt>
-										<dd><span class="review-answer-text content-truncate content-truncate--answer" title="${escapeAttribute(correctText)}">${renderInlineMarkdown(question.choices[question.answerIndex])}</span></dd>
+										<dd><span class="review-answer-text content-truncate content-truncate--answer" title="${escapeAttribute(correctText)}">${renderInlineMarkdown(correctText)}</span></dd>
 									</div>
 								</dl>
 								${explanationMarkup}
