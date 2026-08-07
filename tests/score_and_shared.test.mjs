@@ -12,6 +12,7 @@ import {
 	scoreResponses,
 	selectQuestions,
 } from '../src/score.js';
+import { normalizeAimeAnswer } from '../src/app/shared/scoring/aime/index.js';
 import { clampLeaderboardLimit, clampQuestionsPerPage, loadSettings, saveSettings } from '../src/app/shared/settings.js';
 import { sortQuestionChoicesForHumans } from '../src/app/shared/sorting.js';
 import { summarizeToolPolicy } from '../src/app/shared/benchmark-data.js';
@@ -65,6 +66,25 @@ test('scoreBenchmark rejects unsupported scoring methods', () => {
 		() => scoreBenchmark({ scoring: { method: 'unknown' } }, [], {}),
 		/Unsupported scoring method/,
 	);
+});
+
+test('scoreBenchmark handles AIME exact-answer scoring and normalization', () => {
+	const benchmark = { id: 'aime', name: 'AIME', scoring: { method: 'aime', mode: 'standardized-answer' } };
+	const questions = [{ id: 'q1', answerText: '7' }];
+
+	const summary = scoreBenchmark(benchmark, questions, { q1: '007' });
+	assert.equal(summary.method, 'aime');
+	assert.equal(summary.scoreLabel, 'AIME exact-answer accuracy');
+	assert.equal(summary.correctCount, 1);
+	assert.equal(summary.reviewedQuestions[0].selectedText, '7');
+	assert.equal(summary.reviewedQuestions[0].correctAnswerText, '7');
+});
+
+test('normalizeAimeAnswer accepts integer-like strings and rejects invalid formats', () => {
+	assert.equal(normalizeAimeAnswer('007'), '7');
+	assert.equal(normalizeAimeAnswer('7.0'), '7');
+	assert.equal(normalizeAimeAnswer('1,000'), null);
+	assert.equal(normalizeAimeAnswer('3/4'), null);
 });
 
 test('compareAgainstModels classifies above/within/below correctly', () => {

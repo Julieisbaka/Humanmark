@@ -17,8 +17,23 @@ class BuildBenchmarkIndexTests(unittest.TestCase):
         generated_dir.mkdir(parents=True, exist_ok=True)
         for definition in BENCHMARK_DEFINITIONS:
             path = generated_dir / definition["generatedQuestionsFile"]
-            path.write_text(
-                json.dumps([
+            if definition["scoring"]["mode"] == "standardized-answer":
+                rows = [
+                    {
+                        "id": f"{definition['id']}-q1",
+                        "prompt": "Question?",
+                        "answerText": "7",
+                        "answerValue": 7,
+                    },
+                    {
+                        "id": f"{definition['id']}-q2",
+                        "prompt": "Question 2?",
+                        "answerText": "8",
+                        "answerValue": 8,
+                    },
+                ]
+            else:
+                rows = [
                     {
                         "id": f"{definition['id']}-q1",
                         "prompt": "Question?",
@@ -31,7 +46,9 @@ class BuildBenchmarkIndexTests(unittest.TestCase):
                         "choices": ["A", "B"],
                         "answerIndex": 1,
                     },
-                ], ensure_ascii=False, indent=2)
+                ]
+            path.write_text(
+                json.dumps(rows, ensure_ascii=False, indent=2)
                 + "\n",
                 encoding="utf-8",
             )

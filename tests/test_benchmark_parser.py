@@ -84,6 +84,27 @@ class BenchmarkParserTests(unittest.TestCase):
         self.assertEqual(1, len(parsed))
         self.assertEqual("ok-1", parsed[0]["id"])
 
+    def test_aime_integer_answers_are_parsed_and_invalid_answers_are_dropped(self):
+        sample = [
+            {
+                "ID": "1983-1",
+                "Question": "Find the answer.",
+                "Answer": "007",
+            },
+            {
+                "ID": "1983-2",
+                "Question": "Find the answer.",
+                "Answer": "3/4",
+            },
+        ]
+
+        parsed, stats = parse(sample, dataset_name="di-zhang-fdu/AIME_1983_2024", return_stats=True)
+
+        self.assertEqual(1, len(parsed))
+        self.assertEqual("1983-1", parsed[0]["id"])
+        self.assertEqual("7", parsed[0]["answerText"])
+        self.assertEqual(1, stats.dropped["invalid_standardized_answer"])
+
 
 if __name__ == "__main__":
     unittest.main()

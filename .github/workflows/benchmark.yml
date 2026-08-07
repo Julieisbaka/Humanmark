@@ -36,6 +36,12 @@ jobs:
           --split train
           --output data/benchmarks/generated/gpqa_diamond.json
 
+      - name: Parse AIME
+        run: >
+          python scripts/benchmark.py di-zhang-fdu/AIME_1983_2024
+          --split train
+          --output data/benchmarks/generated/aime.json
+
       - name: Parse Humanity's Last Exam
         run: >
           python scripts/benchmark.py cais/hle

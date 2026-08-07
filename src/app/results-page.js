@@ -241,9 +241,14 @@ export async function renderResults(appData) {
 							? `<details class="review-explanation"><summary><span class="eyebrow">Benchmark explanation</span><span class="review-explanation-toggle">Show explanation</span></summary><div class="markdown-content">${renderMarkdown(explanation)}</div></details>`
 							: '';
 						const mediaMarkup = renderImageGallery(question.media, 'review-media');
-						const selected = question.selectedIndex === null ? 'No answer selected' : question.choices[question.selectedIndex];
-						const selectedText = String(selected ?? '');
-						const correctText = String(question.choices[question.answerIndex] ?? '');
+							const hasChoices = Array.isArray(question.choices) && question.choices.length > 0;
+							const selected = hasChoices
+								? (question.selectedIndex === null ? 'No answer selected' : question.choices[question.selectedIndex])
+								: (question.selectedText ?? 'No answer entered');
+							const selectedText = String(selected ?? '');
+							const correctText = hasChoices
+								? String(question.choices[question.answerIndex] ?? '')
+								: String(question.correctAnswerText ?? question.answerText ?? '');
 
 						return `
 							<section class="review-item ${question.isCorrect ? 'review-item--correct' : 'review-item--wrong'}">

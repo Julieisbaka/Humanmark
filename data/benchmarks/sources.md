@@ -1,3 +1,11 @@
+## Standardized answer
+
+di-zhang-fdu/AIME_1983_2024
+
+Each benchmark lives in its own JSON file under `data/benchmarks/`.
+
+Parsed output keeps only the question prompt and exact standardized answer text needed by the client.
+
 ## 4 options
 
 Idavidrein/gpqa, gpqa_diamond

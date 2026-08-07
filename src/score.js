@@ -1,3 +1,5 @@
+import { AIME_SCORING_METHOD, scoreAimeAnswer } from './app/shared/scoring/aime/index.js';
+
 const DEFAULT_CONFIDENCE = 0.95;
 const DEFAULT_Z_SCORE = 1.96;
 export const STATE_KEY = 'humanmark-benchmark-state';
@@ -175,11 +177,21 @@ export function scoreResponses(questions, answers) {
 
 	const reviewedQuestions = (questions ?? []).map((question) => {
 		const selected = answers?.[question.id];
-		const selectedIndex = selected === undefined ? null : Number(selected);
-		const correct = Number(selected) === Number(question.answerIndex);
+		let selectedIndex = selected === undefined ? null : Number(selected);
+		let selectedText = selected === undefined || selected === null ? null : String(selected).trim();
+		let correctAnswerText = null;
+		let correct = Number(selected) === Number(question.answerIndex);
 
 		let methodScore = correct ? 1 : 0;
-		if (question?.scoringMethod === 'arc_pmi') {
+		if (question?.scoringMethod === AIME_SCORING_METHOD || question?.answerText !== undefined) {
+			const aimeScore = scoreAimeAnswer(question.answerText ?? question.answer, selected);
+			correct = aimeScore.isCorrect;
+			methodScore = aimeScore.methodScore;
+			selectedIndex = null;
+			selectedText = aimeScore.selectedAnswerText;
+			correctAnswerText = aimeScore.expectedAnswerText;
+			methodScoredQuestions += 1;
+		} else if (question?.scoringMethod === 'arc_pmi') {
 			const arcScore = scoreArcPmiQuestion(question, selectedIndex);
 			if (arcScore !== null) {
 				methodScore = arcScore;
@@ -192,6 +204,8 @@ export function scoreResponses(questions, answers) {
 		return {
 			...question,
 			selectedIndex,
+			selectedText,
+			correctAnswerText,
 			isCorrect: correct,
 			methodScore,
 		};
@@ -220,7 +234,7 @@ export function scoreResponses(questions, answers) {
 export function scoreBenchmark(benchmark, questions, answers) {
 	const scoringMethod = benchmark?.scoring?.method ?? 'pass@1';
 
-	if (!['pass@1', 'arc_pmi'].includes(scoringMethod)) {
+	if (!['pass@1', 'arc_pmi', AIME_SCORING_METHOD].includes(scoringMethod)) {
 		throw new Error(`Unsupported scoring method: ${scoringMethod}`);
 	}
 
@@ -231,7 +245,11 @@ export function scoreBenchmark(benchmark, questions, answers) {
 	const scoreSummary = scoreResponses(scoredQuestions, answers);
 
 	const scoreLabel =
-		scoringMethod === 'arc_pmi' ? 'ARC PMI score (normalized, 0 to 1)' : 'Accuracy (pass@1)';
+		scoringMethod === 'arc_pmi'
+			? 'ARC PMI score (normalized, 0 to 1)'
+			: scoringMethod === AIME_SCORING_METHOD
+				? 'AIME exact-answer accuracy'
+				: 'Accuracy (pass@1)';
 
 	return {
 		...scoreSummary,

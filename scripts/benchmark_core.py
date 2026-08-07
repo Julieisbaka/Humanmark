@@ -100,6 +100,59 @@ def _normalize_choice_for_compare(value: Any) -> str:
     return re.sub(r"\s+", " ", str(value).strip()).casefold()
 
 
+def _normalize_aime_answer(value: Any) -> str | None:
+    if value is None:
+        return None
+
+    if isinstance(value, bool):
+        return None
+
+    if isinstance(value, (list, tuple)):
+        for candidate in value:
+            normalized = _normalize_aime_answer(candidate)
+            if normalized is not None:
+                return normalized
+        return None
+
+    if isinstance(value, dict):
+        for key in ("answer", "final_answer", "value", "text", "label", "index"):
+            if key in value:
+                normalized = _normalize_aime_answer(value[key])
+                if normalized is not None:
+                    return normalized
+        return None
+
+    if isinstance(value, int):
+        if 0 <= value <= 999:
+            return str(value)
+        return None
+
+    if isinstance(value, float):
+        if value.is_integer() and 0 <= value <= 999:
+            return str(int(value))
+        return None
+
+    text = str(value).strip().replace(",", "")
+    if not text:
+        return None
+
+    if not re.fullmatch(r"[-+]?\d+(?:\.0+)?", text):
+        return None
+
+    try:
+        numeric = int(float(text))
+    except (TypeError, ValueError):
+        return None
+
+    if numeric < 0 or numeric > 999:
+        return None
+
+    if float(text) != numeric:
+        return None
+
+    return str(numeric)
+
+
 def _validate_question(prompt: str, choices: list[str], answer_index: int) -> str | None:
     if not prompt or not prompt.strip():
         return "invalid_prompt_empty"
@@ -595,6 +648,40 @@ def _build_parsed_record(
     }
 
 
+def _build_standardized_record(
+    example: dict[str, Any],
+    index: int,
+    dataset_name: str | None,
+    stats: ParseStats,
+) -> dict[str, Any] | None:
+    base_prompt = _first_value(example, QUESTION_KEYS)
+    if base_prompt is None:
+        stats.drop("missing_prompt")
+        return None
+
+    prompt = _build_prompt(example, base_prompt)
+    raw_answer = _first_value(example, ANSWER_KEYS)
+    if raw_answer is None:
+        stats.drop("missing_answer")
+        return None
+
+    answer_text = _normalize_aime_answer(raw_answer)
+    if answer_text is None:
+        stats.drop("invalid_standardized_answer")
+        return None
+
+    explanation = _first_value(example, EXPLANATION_KEYS)
+    example_id = _first_value(example, ID_KEYS) or f"question-{index + 1}"
+
+    return {
+        "id": str(example_id),
+        "prompt": str(prompt).strip(),
+        "answerText": answer_text,
+        "answerValue": int(answer_text),
+        **({"explanation": str(explanation).strip()} if explanation is not None else {}),
+    }
+
+
 def _parse_hle_example(
     example: dict[str, Any],
     index: int,
@@ -625,6 +712,8 @@ def _resolve_adapter(dataset_name: str | None):
         return _parse_generic_example
 
     normalized_name = dataset_name.strip().casefold()
+    if normalized_name == "di-zhang-fdu/aime_1983_2024":
+        return _build_standardized_record
     if normalized_name == "cais/hle":
         return _parse_hle_example
 

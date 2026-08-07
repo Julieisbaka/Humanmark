@@ -17,6 +17,21 @@ from typing import Any
 
 BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
     {
+        "id": "aime",
+        "name": "AIME",
+        "description": "A standardized integer-answer mathematics benchmark scored by exact answer matching.",
+        "options": None,
+        "scoring": {"method": "aime", "mode": "standardized-answer", "answerFormat": "integer"},
+        "source": {"dataset": "di-zhang-fdu/AIME_1983_2024", "subset": None, "split": "train"},
+        "tags": ["mathematics", "integer answers", "standardized answer"],
+        "toolPolicy": {
+            "modelToolsAllowed": False,
+            "allowedTools": [],
+        },
+        "generatedQuestionsFile": "aime.json",
+        "file": "aime.json",
+    },
+    {
         "id": "gpqa_diamond",
         "name": "GPQA Diamond",
         "description": "A hard 4-option science benchmark that rewards careful reasoning over guesswork.",

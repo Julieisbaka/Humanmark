@@ -32,6 +32,7 @@ export async function renderQuestions(appData) {
 	const benchmark = state ? await loadBenchmarkDetails(appData, state.benchmarkId) : null;
 	const container = document.querySelector('[data-role="questions-shell"]');
 	const status = document.querySelector('[data-role="questions-status"]');
+	const standardizedAnswerMode = benchmark?.scoring?.mode === 'standardized-answer';
 	let draftCrossedOutChoices = normalizeCrossedOutChoices(state?.crossedOutChoices);
 
 	if (!state || !benchmark || !container || !status) {
@@ -79,6 +80,14 @@ export async function renderQuestions(appData) {
 
 	const collectCurrentPageResponses = () => {
 		pageWindow().forEach((question) => {
+			if (standardizedAnswerMode) {
+				const selected = container.querySelector(`input[name="${question.id}"]`);
+				if (selected) {
+					draftAnswers[question.id] = String(selected.value ?? '').trim();
+				}
+				return;
+			}
+
 			const selected = container.querySelector(`input[name="${question.id}"]:checked`);
 			if (selected) {
 				draftAnswers[question.id] = Number(selected.value);
@@ -127,6 +136,30 @@ export async function renderQuestions(appData) {
 						const crossedOut = new Set(draftCrossedOutChoices[question.id] ?? []);
 						const promptText = numberStandaloneBulletLists(stripDuplicatedChoiceLines(question.prompt, question.choices));
 						const mediaMarkup = renderImageGallery(question.media, 'question-media');
+						const currentAnswer = String(draftAnswers?.[question.id] ?? '');
+
+						if (standardizedAnswerMode) {
+							return `
+								<fieldset class="question-card">
+									<legend>
+										<span class="question-number">Question ${(currentPage - 1) * questionsPerPage + index + 1}</span>
+										<div class="question-prompt markdown-content content-truncate content-truncate--question" title="${escapeAttribute(promptText)}">${renderMarkdown(promptText)}</div>
+										${mediaMarkup}
+									</legend>
+									<label class="field">
+										<span>Exact answer</span>
+										<input
+											type="text"
+											name="${escapeAttribute(question.id)}"
+											value="${escapeAttribute(currentAnswer)}"
+											placeholder="Enter the exact answer"
+											autocomplete="off"
+											spellcheck="false"
+										/>
+									</label>
+								</fieldset>
+							`;
+						}
 
 						return `
 							<fieldset class="question-card">

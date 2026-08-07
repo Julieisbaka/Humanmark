@@ -64,8 +64,8 @@ export function renderHome(appData) {
 						<dd>${benchmark.questionCount ?? benchmark.questions?.length ?? 'Unavailable'}</dd>
 					</div>
 					<div>
-						<dt>Options</dt>
-						<dd>${benchmark.options}</dd>
+						<dt>${benchmark.scoring?.mode === 'standardized-answer' ? 'Answer format' : 'Options'}</dt>
+						<dd>${benchmark.scoring?.mode === 'standardized-answer' ? `${benchmark.scoring?.answerFormat ?? 'standardized answer'}` : benchmark.options}</dd>
 					</div>
 					<div>
 						<dt>Source</dt>
