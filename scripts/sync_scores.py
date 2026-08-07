@@ -93,6 +93,7 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
             "generatedAt": payload.get("generatedAt") or payload.get("timestamp") or "unknown",
             "methodologyUrl": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
             "benchmarks": {
+                "aime": build_benchmark("aime", "AIME", ["aime", "aime_25"]),
                 "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
                 "humanitys_last_exam": build_benchmark("humanitys_last_exam", "Humanity's Last Exam", ["humanitys_last_exam", "hle", "cais_hle"]),
                 "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),

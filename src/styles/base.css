@@ -148,6 +148,8 @@ select,
 	border: 1px solid transparent;
 }
 
+.field input[type='text'],
+.field input[type='search'],
 .field input[type='number'] {
 	min-height: 48px;
 	border-radius: 14px;
@@ -155,7 +157,22 @@ select,
 	background: rgba(12, 19, 36, 0.92);
 	color: var(--text);
 	padding: 0 14px;
+	width: 100%;
 	appearance: textfield;
+}
+
+.field input[type='text']::placeholder,
+.field input[type='search']::placeholder,
+.field input[type='number']::placeholder {
+	color: rgba(184, 192, 206, 0.72);
+}
+
+.field input[type='text']:focus,
+.field input[type='search']:focus,
+.field input[type='number']:focus,
+select:focus {
+	outline: 2px solid rgba(138, 180, 248, 0.35);
+	outline-offset: 2px;
 }
 
 .field input[type='number']::-webkit-outer-spin-button,

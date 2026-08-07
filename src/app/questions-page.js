@@ -129,6 +129,15 @@ export async function renderQuestions(appData) {
 				<p class="eyebrow">Tool policy</p>
 				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
 			</article>
+			${standardizedAnswerMode ? `
+				<article class="panel panel--soft aime-scoring-note">
+					<p class="eyebrow">AIME scoring</p>
+					<p>
+						Answers on AIME are scored with logic-based normalization instead of multiple choice.
+						Enter the exact mathematical answer; equivalent integer forms are accepted when they normalize to the same value.
+					</p>
+				</article>
+			` : ''}
 			<form class="stack" data-role="question-form">
 			${currentQuestions
 				.map(
@@ -147,12 +156,13 @@ export async function renderQuestions(appData) {
 										${mediaMarkup}
 									</legend>
 									<label class="field">
-										<span>Exact answer</span>
 										<input
 											type="text"
 											name="${escapeAttribute(question.id)}"
 											value="${escapeAttribute(currentAnswer)}"
-											placeholder="Enter the exact answer"
+											placeholder="Enter answer"
+											inputmode="numeric"
+											pattern="[0-9]*"
 											autocomplete="off"
 											spellcheck="false"
 										/>
