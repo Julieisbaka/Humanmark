@@ -10,7 +10,7 @@
     },
     "devDependencies": {
         "eslint": "^10.8.0",
-        "jsdom": "^26.1.0"
+        "jsdom": "^30.0.1"
     },
     "overrides": {
         "brace-expansion": "^5.0.9"
