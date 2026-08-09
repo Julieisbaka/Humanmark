@@ -150,6 +150,43 @@ def generate_changelog(
     return output_path
 
 
+_DRY_RUN_SUMMARY = """\
+### New features
+- Added weekly AI-generated changelog surfaced on the homepage.
+
+### Improvements
+- Scores and benchmark data are now refreshed on a regular schedule.
+
+### Data updates
+- Latest model scores have been synced from upstream providers.
+"""
+
+
+def _dry_run(output_path: Path, days: int) -> Path:
+    """Write a sample changelog without calling the Copilot API.
+
+    Useful for local development and smoke-testing the homepage UI.
+    """
+    commits = _get_commits_since_days(days)
+    commits = [c for c in commits if not _is_bot_commit(c)]
+    head_sha = _get_head_sha()
+
+    changelog = {
+        "generatedAt": datetime.now(timezone.utc).isoformat(),
+        "generatedBy": "dry-run",
+        "headSha": head_sha,
+        "commitCount": len(commits),
+        "summary": _DRY_RUN_SUMMARY.strip(),
+    }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(
+        json.dumps(changelog, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return output_path
+
+
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Generate an AI-powered changelog from recent commits."
@@ -176,11 +213,27 @@ def _parse_args() -> argparse.Namespace:
         default=os.getenv("GITHUB_TOKEN"),
         help="GitHub token used to call the Copilot API.",
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help=(
+            "Write a sample changelog using placeholder text without calling "
+            "the Copilot API.  Useful for local UI smoke-testing."
+        ),
+    )
     return parser.parse_args()
 
 
 def main() -> None:
     args = _parse_args()
+
+    if args.dry_run:
+        output = _dry_run(
+            output_path=args.output.resolve(),
+            days=args.days,
+        )
+        print(f"Dry-run: wrote sample changelog to {output}")
+        return
 
     if not args.token:
         raise SystemExit(

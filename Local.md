@@ -33,6 +33,31 @@ These commands will refresh:
 - `data/scores/current.json`
 - `data/benchmarks/index.json`
 
+## Test the AI changelog locally
+
+The weekly changelog panel on the homepage is populated from `data/changelog.json`.
+You can generate a sample file without a GitHub token using the `--dry-run` flag:
+
+```bash
+python scripts/generate_changelog.py --dry-run
+```
+
+This writes placeholder content to `data/changelog.json` and lets you verify
+the changelog UI in the browser without making any API calls.
+
+To generate a real AI summary (requires a GitHub token with access to the
+GitHub Copilot chat completions API):
+
+```bash
+GITHUB_TOKEN=<your-token> python scripts/generate_changelog.py
+```
+
+To run the automated tests for the changelog generator:
+
+```bash
+python scripts/run_python_tests.py
+```
+
 ## Notes
 
 - The app reads data from the generated JSON files under the data directory.
