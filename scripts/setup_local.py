@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import sys
 import traceback
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.request import Request, urlopen
 
 try:
     from scripts.benchmark import parse, save
@@ -14,15 +16,13 @@ try:
     from scripts.build_benchmark_index import BENCHMARK_DEFINITIONS, build_index
     from scripts.sync_scores import (
         DEFAULT_SOURCE_URL,
-        _load_json_from_path,
-        _load_json_from_url,
         sync_scores,
     )
 except ModuleNotFoundError:
     from benchmark import parse, save
     from benchmark_io import load as load_dataset
     from build_benchmark_index import BENCHMARK_DEFINITIONS, build_index
-    from sync_scores import DEFAULT_SOURCE_URL, _load_json_from_path, _load_json_from_url, sync_scores
+    from sync_scores import DEFAULT_SOURCE_URL, sync_scores
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,8 +86,15 @@ def refresh_benchmarks(project_root: Path) -> None:
 
 def load_score_source(source_url: str, api_key: str | None) -> dict[str, object]:
     if source_url.startswith(("http://", "https://")):
-        return _load_json_from_url(source_url, api_key)
-    return _load_json_from_path(Path(source_url))
+        headers = {"Accept": "application/json"}
+        if api_key:
+            headers["x-api-key"] = api_key
+
+        request = Request(source_url, headers=headers)
+        with urlopen(request, timeout=60) as response:
+            return json.loads(response.read().decode("utf-8"))
+
+    return json.loads(Path(source_url).read_text(encoding="utf-8"))
 
 
 def refresh_scores(project_root: Path, source_url: str, api_key: str | None) -> Path:

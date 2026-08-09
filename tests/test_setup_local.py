@@ -1,12 +1,12 @@
 import io
 import pathlib
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr, redirect_stdout
 from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-import sys
 
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
