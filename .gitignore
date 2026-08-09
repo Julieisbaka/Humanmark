@@ -2,12 +2,7 @@
 .env
 
 # Generated data
-gpqa_diamond.json
-humanitys_last_exam.json
-mmlu_pro.json
-index.json
-current.json
-aime.json
+/data/benchmarks/generated/*.json
 
 # Python
 __pycache__/
