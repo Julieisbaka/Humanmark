@@ -298,15 +298,21 @@
 }
 
 .choice-crossout-button:hover {
-	border-color: rgba(239, 68, 68, 0.34);
+	border-color: rgba(157, 177, 255, 0.28);
 	color: var(--text);
-	background: rgba(239, 68, 68, 0.1);
+	background: rgba(157, 177, 255, 0.08);
 }
 
 .choice-item--crossed .choice-crossout-button {
 	border-color: rgba(239, 68, 68, 0.34);
 	color: var(--danger);
 	background: rgba(239, 68, 68, 0.08);
+}
+
+.choice-item--crossed .choice-crossout-button:hover {
+	border-color: rgba(239, 68, 68, 0.5);
+	color: var(--danger);
+	background: rgba(239, 68, 68, 0.16);
 }
 
 .score-ring {
