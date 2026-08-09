@@ -2,6 +2,7 @@ import json
 import pathlib
 import tempfile
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -12,6 +13,8 @@ if str(ROOT) not in sys.path:
 
 from scripts.generate_changelog import (
     COPILOT_API_URL,
+    DEFAULT_COPILOT_INTEGRATION_ID,
+    _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
     generate_changelog,
@@ -66,6 +69,18 @@ class GenerateChangelogTests(unittest.TestCase):
         self.assertEqual("No significant changes were made this week.", summary)
         mock_urlopen.assert_not_called()
 
+    def test_build_fallback_summary_formats_recent_commits(self):
+        summary = _build_fallback_summary(
+            ["feat: add changelog", "fix: handle API fallback"]
+        )
+
+        self.assertEqual(
+            "### Recent updates\n"
+            "- feat: add changelog\n"
+            "- fix: handle API fallback",
+            summary,
+        )
+
     def test_call_copilot_sends_expected_payload_and_parses_response(self):
         captured = {}
 
@@ -73,6 +88,7 @@ class GenerateChangelogTests(unittest.TestCase):
             captured["url"] = request.full_url
             captured["authorization"] = request.headers.get("Authorization")
             captured["content_type"] = request.headers.get("Content-type")
+            captured["integration_id"] = request.headers.get("Copilot-integration-id")
             captured["payload"] = json.loads(request.data.decode("utf-8"))
             captured["timeout"] = timeout
             return _FakeHTTPResponse(
@@ -97,6 +113,10 @@ class GenerateChangelogTests(unittest.TestCase):
         self.assertEqual(COPILOT_API_URL, captured["url"])
         self.assertIn("token123", captured["authorization"] or "")
         self.assertEqual("application/json", captured["content_type"])
+        self.assertEqual(
+            DEFAULT_COPILOT_INTEGRATION_ID,
+            captured["integration_id"],
+        )
         self.assertEqual(60, captured["timeout"])
         self.assertEqual("gpt-4o", captured["payload"]["model"])
         self.assertEqual("system", captured["payload"]["messages"][0]["role"])
@@ -112,6 +132,34 @@ class GenerateChangelogTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "Unexpected Copilot API response"):
                 _call_copilot(["fix: handle errors"], "token123")
+
+    def test_call_copilot_uses_configurable_integration_id(self):
+        captured = {}
+
+        def fake_urlopen(request, timeout):
+            captured["integration_id"] = request.headers.get("Copilot-integration-id")
+            return _FakeHTTPResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "### Improvements\n- Added changelog generation."
+                            }
+                        }
+                    ]
+                }
+            )
+
+        with patch.dict(
+            "scripts.generate_changelog.os.environ",
+            {"COPILOT_INTEGRATION_ID": "my-custom-integration"},
+        ), patch(
+            "scripts.generate_changelog.urlopen",
+            side_effect=fake_urlopen,
+        ):
+            _call_copilot(["feat: add changelog"], "token123")
+
+        self.assertEqual("my-custom-integration", captured["integration_id"])
 
     def test_generate_changelog_writes_expected_json_payload(self):
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -146,6 +194,43 @@ class GenerateChangelogTests(unittest.TestCase):
                 ["feat: add changelog", "fix: polish disclaimer"],
                 "token123",
             )
+
+    def test_generate_changelog_falls_back_when_copilot_request_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = pathlib.Path(temp_dir) / "data" / "changelog.json"
+
+            with patch(
+                "scripts.generate_changelog._get_commits_since_days",
+                return_value=["feat: add changelog", "fix: handle API fallback"],
+            ), patch(
+                "scripts.generate_changelog._call_copilot",
+                side_effect=HTTPError(
+                    COPILOT_API_URL,
+                    400,
+                    "Bad Request",
+                    hdrs=None,
+                    fp=None,
+                ),
+            ), patch(
+                "scripts.generate_changelog._get_head_sha",
+                return_value="cafebabe",
+            ):
+                written_path = generate_changelog(
+                    output_path=output_path,
+                    since_sha=None,
+                    token="token123",
+                    days=7,
+                )
+
+            self.assertEqual(output_path, written_path)
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                "### Recent updates\n"
+                "- feat: add changelog\n"
+                "- fix: handle API fallback",
+                payload["summary"],
+            )
+
     def test_bot_commits_are_filtered_from_commit_list(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = pathlib.Path(temp_dir) / "changelog.json"
