@@ -34,6 +34,22 @@ jobs:
       - name: Refresh model scores
         run: python scripts/sync_scores.py
 
+      - name: Determine changelog base commit from last Pages update
+        run: |
+          LAST_PAGES_MARKER="$(git log --grep='^pages updated for ' --format='%s' -n 1)"
+          if [ -z "$LAST_PAGES_MARKER" ]; then
+            echo "No Pages marker commit found. Falling back to --days window."
+            exit 0
+          fi
+
+          LAST_PAGES_SHA="$(echo "$LAST_PAGES_MARKER" | sed -E 's/^pages updated for ([0-9a-f]+).*/\1/')"
+          if git rev-parse --verify --quiet "${LAST_PAGES_SHA}^{commit}" >/dev/null; then
+            echo "SINCE_SHA=$LAST_PAGES_SHA" >> "$GITHUB_ENV"
+            echo "Using commits after Pages update marker SHA: $LAST_PAGES_SHA"
+          else
+            echo "Could not resolve marker SHA '$LAST_PAGES_SHA'. Falling back to --days window."
+          fi
+
       - name: Generate AI changelog
         run: python scripts/generate_changelog.py --days 7
         env:
