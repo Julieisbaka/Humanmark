@@ -24,6 +24,23 @@ function normalizeCrossedOutChoices(value) {
 	return normalized;
 }
 
+function removeCrossedOutAnswers(answers, crossedOutChoices) {
+	if (!answers || typeof answers !== 'object') {
+		return {};
+	}
+
+	const sanitizedAnswers = { ...answers };
+
+	for (const [questionId, selectedChoice] of Object.entries(sanitizedAnswers)) {
+		const selectedIndex = Number(selectedChoice);
+		if ((crossedOutChoices[questionId] ?? []).includes(selectedIndex)) {
+			delete sanitizedAnswers[questionId];
+		}
+	}
+
+	return sanitizedAnswers;
+}
+
 export async function renderQuestions(appData) {
 	const state = getState();
 	const settings = loadSettings();
@@ -59,7 +76,9 @@ export async function renderQuestions(appData) {
 		.map((question) => sortQuestionChoicesForHumans(question, sortNumericChoices));
 	const totalPages = Math.max(1, Math.ceil(selectedQuestions.length / questionsPerPage));
 	let currentPage = Math.min(Math.max(Number(state.currentQuestionPage ?? 1), 1), totalPages);
-	let draftAnswers = { ...(state.answers ?? {}) };
+	let draftAnswers = standardizedAnswerMode
+		? { ...(state.answers ?? {}) }
+		: removeCrossedOutAnswers(state.answers, draftCrossedOutChoices);
 	let pendingCrossoutSaveTimer = null;
 
 	const persistProgress = (overrides = {}) => {
@@ -88,7 +107,7 @@ export async function renderQuestions(appData) {
 				return;
 			}
 
-			const selected = container.querySelector(`input[name="${question.id}"]:checked`);
+			const selected = container.querySelector(`input[name="${question.id}"]:checked:not(:disabled)`);
 			if (selected) {
 				draftAnswers[question.id] = Number(selected.value);
 			}
