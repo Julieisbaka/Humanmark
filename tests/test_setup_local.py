@@ -95,6 +95,10 @@ class SetupLocalTests(unittest.TestCase):
     def test_build_local_url_rewrites_wildcard_host(self):
         self.assertEqual("http://127.0.0.1:8000/", setup_local.build_local_url("0.0.0.0", 8000))
 
+    def test_load_score_source_rejects_insecure_http(self):
+        with self.assertRaises(ValueError):
+            setup_local.load_score_source("http://example.com/scores.json", api_key="token")
+
 
 if __name__ == "__main__":
     unittest.main()

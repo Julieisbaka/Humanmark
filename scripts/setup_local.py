@@ -53,7 +53,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def _generated_paths(project_root: Path, definition: dict[str, object]) -> Path:
+def _generated_path(project_root: Path, definition: dict[str, object]) -> Path:
     return project_root / "data" / "benchmarks" / "generated" / str(definition["generatedQuestionsFile"])
 
 
@@ -62,7 +62,7 @@ def refresh_benchmarks(project_root: Path) -> None:
         dataset_name = str(definition["source"]["dataset"])
         subset = definition["source"].get("subset")
         split = definition["source"].get("split")
-        output_path = _generated_paths(project_root, definition)
+        output_path = _generated_path(project_root, definition)
 
         print(f"Downloading {dataset_name}...", flush=True)
         dataset = load_dataset(
@@ -85,7 +85,7 @@ def refresh_benchmarks(project_root: Path) -> None:
 
 
 def load_score_source(source_url: str, api_key: str | None) -> dict[str, object]:
-    if source_url.startswith(("http://", "https://")):
+    if source_url.startswith("https://"):
         headers = {"Accept": "application/json"}
         if api_key:
             headers["x-api-key"] = api_key
@@ -93,6 +93,9 @@ def load_score_source(source_url: str, api_key: str | None) -> dict[str, object]
         request = Request(source_url, headers=headers)
         with urlopen(request, timeout=60) as response:
             return json.loads(response.read().decode("utf-8"))
+
+    if source_url.startswith("http://"):
+        raise ValueError("Only HTTPS score URLs are supported.")
 
     return json.loads(Path(source_url).read_text(encoding="utf-8"))
 
