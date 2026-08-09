@@ -35,10 +35,16 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--host", default="localhost", help="Host interface for the local server.")
     parser.add_argument("--port", type=int, default=8000, help="Port for the local server.")
     parser.add_argument(
-        "--directory",
+        "--project-root",
         type=Path,
         default=ROOT,
-        help="Project directory to serve.",
+        help="Project root used for benchmark and score output paths.",
+    )
+    parser.add_argument(
+        "--directory",
+        type=Path,
+        default=None,
+        help="Directory to serve. Defaults to the project root.",
     )
     parser.add_argument(
         "--source-url",
@@ -97,6 +103,9 @@ def load_score_source(source_url: str, api_key: str | None) -> dict[str, object]
     if source_url.startswith("http://"):
         raise ValueError("Only HTTPS score URLs are supported.")
 
+    if "://" in source_url:
+        raise ValueError("Unsupported score source URL scheme.")
+
     return json.loads(Path(source_url).read_text(encoding="utf-8"))
 
 
@@ -142,11 +151,13 @@ def run_setup(
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
+    project_root = args.project_root.resolve()
+    directory = args.directory.resolve() if args.directory is not None else project_root
 
     try:
         run_setup(
-            project_root=ROOT,
-            directory=args.directory.resolve(),
+            project_root=project_root,
+            directory=directory,
             host=args.host,
             port=args.port,
             source_url=args.source_url,
