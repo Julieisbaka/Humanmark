@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-09T22:38:23.751704+00:00",
-  "generatedBy": "dry-run",
-  "headSha": "4620de629cbf9667607bd0106b60232b75f828b6",
-  "commitCount": 2,
-  "summary": "### New features\n- Added weekly AI-generated changelog surfaced on the homepage.\n\n### Improvements\n- Scores and benchmark data are now refreshed on a regular schedule.\n\n### Data updates\n- Latest model scores have been synced from upstream providers."
+  "generatedAt": "2026-08-09T23:51:11.166826+00:00",
+  "generatedBy": "copilot",
+  "headSha": "bfa48b8707848fe73ab114ee75d0ee2c8360bde3",
+  "commitCount": 46,
+  "summary": "### Recent updates\n- chore: remove redundant changelog integration env override\n- fix: send required Copilot integration header for changelog API\n- ci: split AI changelog into separate workflow\n- test: keep changelog tests formatted\n- fix: fall back when changelog API fails\n- Initial plan\n- docs(Local.md): fix HF_TOKEN placeholder to avoid bash redirection\n- Fix Local.md: add pip install datasets and HF_TOKEN setup before benchmark commands\n- Initial plan\n- Clarify benchmark snapshot docs\n- Plus 36 more commit(s)."
 }
