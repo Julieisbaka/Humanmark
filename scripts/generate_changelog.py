@@ -42,6 +42,10 @@ SYSTEM_PROMPT = (
 )
 
 
+def _is_bot_commit(subject: str) -> bool:
+    return "[skip ci]" in subject
+
+
 def _get_commits_since_sha(since_sha: str) -> list[str]:
     result = subprocess.run(
         ["git", "log", f"{since_sha}..HEAD", "--pretty=format:%s", "--no-merges"],
@@ -123,6 +127,8 @@ def generate_changelog(
         commits = _get_commits_since_sha(since_sha)
     else:
         commits = _get_commits_since_days(days)
+
+    commits = [c for c in commits if not _is_bot_commit(c)]
 
     summary = _call_copilot(commits, token)
     head_sha = _get_head_sha()

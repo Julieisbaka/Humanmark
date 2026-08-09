@@ -64,5 +64,11 @@ jobs:
             echo "No changelog changes to commit."
           else
             git commit -m "chore: update AI changelog [skip ci]"
-            git push origin HEAD
+            git push origin HEAD:"$GITHUB_REF_NAME"
           fi
+
+      - name: Write Pages update marker commit
+        run: |
+          HEAD_SHA="$(git rev-parse HEAD)"
+          git commit --allow-empty -m "pages updated for ${HEAD_SHA}"
+          git push origin HEAD:"$GITHUB_REF_NAME"

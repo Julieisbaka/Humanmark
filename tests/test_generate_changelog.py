@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from scripts.generate_changelog import (
     COPILOT_API_URL,
     _call_copilot,
+    _is_bot_commit,
     generate_changelog,
 )
 
@@ -145,7 +146,44 @@ class GenerateChangelogTests(unittest.TestCase):
                 ["feat: add changelog", "fix: polish disclaimer"],
                 "token123",
             )
+    def test_bot_commits_are_filtered_from_commit_list(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = pathlib.Path(temp_dir) / "changelog.json"
+            with patch(
+                "scripts.generate_changelog._get_commits_since_days",
+                return_value=[
+                    "feat: real user change",
+                    "chore: update AI changelog [skip ci]",
+                    "chore: refresh scores [skip ci]",
+                ],
+            ) as mock_since_days, patch(
+                "scripts.generate_changelog._call_copilot",
+                return_value="summary",
+            ) as mock_call_copilot, patch(
+                "scripts.generate_changelog._get_head_sha",
+                return_value="abc123",
+            ):
+                generate_changelog(
+                    output_path=output_path,
+                    since_sha=None,
+                    token="token",
+                    days=7,
+                )
+
+            mock_since_days.assert_called_once()
+            # Only the non-bot commit should be forwarded to _call_copilot
+            mock_call_copilot.assert_called_once_with(
+                ["feat: real user change"],
+                "token",
+            )
+
+    def test_is_bot_commit_detects_skip_ci(self):
+        self.assertTrue(_is_bot_commit("chore: update AI changelog [skip ci]"))
+        self.assertTrue(_is_bot_commit("chore: refresh scores [skip ci]"))
+        self.assertFalse(_is_bot_commit("feat: add new feature"))
+        self.assertFalse(_is_bot_commit("fix: patch bug"))
 
 
-if __name__ == "__main__":
+
+if __name__ == '__main__':
     unittest.main()
