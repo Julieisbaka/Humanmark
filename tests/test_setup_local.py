@@ -56,7 +56,7 @@ class SetupLocalTests(unittest.TestCase):
                 patch.object(setup_local, "create_server", return_value=server) as create_server,
                 redirect_stdout(io.StringIO()) as stdout,
             ):
-                url = setup_local.run_setup(
+                setup_local.run_setup(
                     project_root=root,
                     directory=root,
                     host="localhost",
@@ -65,7 +65,6 @@ class SetupLocalTests(unittest.TestCase):
                     api_key="token",
                 )
 
-        self.assertEqual("http://localhost:8123/", url)
         load_dataset.assert_called_once_with("demo/set", task="subset-a", split="train")
         parse.assert_called_once_with(["raw"], dataset_name="demo/set", return_stats=True)
         save.assert_called_once_with([{"id": "q1"}], root / "data" / "benchmarks" / "generated" / "demo.json")

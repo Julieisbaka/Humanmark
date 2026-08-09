@@ -122,7 +122,7 @@ def run_setup(
     port: int,
     source_url: str,
     api_key: str | None,
-) -> str:
+) -> None:
     refresh_benchmarks(project_root)
     refresh_scores(project_root, source_url, api_key)
 
@@ -133,7 +133,6 @@ def run_setup(
         print(f"Local server running at {url}", flush=True)
         print("Press Ctrl+C to stop the server.", flush=True)
         server.serve_forever()
-        return url
     finally:
         server.server_close()
 
