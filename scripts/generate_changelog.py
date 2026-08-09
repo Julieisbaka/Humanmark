@@ -4,13 +4,17 @@ Fetches commits since the last weekly update (up to 7 days back), sends them
 to the GitHub Copilot chat completions API for summarization, and writes the
 result to ``data/changelog.json``.
 
-Required environment variables:
+Required environment variables (or .env file entries):
   GITHUB_TOKEN  — a GitHub token used to call the GitHub Copilot chat
                   completions API.
 
 Optional environment variables:
   SINCE_SHA     — if set, commits are collected starting from this SHA
                   (exclusive) up to HEAD.  Falls back to --days when absent.
+
+Local development:
+  Create a ``.env`` file in the project root with ``GITHUB_TOKEN=<your-token>``
+  and the script will pick it up automatically.  See Local.md for details.
 """
 
 from __future__ import annotations
@@ -27,6 +31,32 @@ from urllib.error import HTTPError, URLError
 
 COPILOT_API_URL = "https://api.githubcopilot.com/chat/completions"
 MODEL_NAME = "gpt-4o"
+
+
+def _load_dotenv(dotenv_path: Path) -> None:
+    """Load key=value pairs from *dotenv_path* into the environment.
+
+    Only sets variables that are not already present in the environment so
+    that shell exports and CI-injected values always take precedence.
+    Blank lines and lines starting with ``#`` are silently ignored.
+    Quoted values (single or double quotes) are unquoted automatically.
+    """
+    if not dotenv_path.is_file():
+        return
+
+    for raw_line in dotenv_path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, _, raw_value = line.partition("=")
+        key = key.strip()
+        if not key:
+            continue
+        value = raw_value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in ('"', "'"):
+            value = value[1:-1]
+        if key not in os.environ:
+            os.environ[key] = value
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant that writes concise, human-readable release "
@@ -225,6 +255,7 @@ def _parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
+    _load_dotenv(Path(__file__).resolve().parents[1] / ".env")
     args = _parse_args()
 
     if args.dry_run:

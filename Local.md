@@ -45,12 +45,25 @@ python scripts/generate_changelog.py --dry-run
 This writes placeholder content to `data/changelog.json` and lets you verify
 the changelog UI in the browser without making any API calls.
 
-To generate a real AI summary (requires a GitHub token with access to the
-GitHub Copilot chat completions API):
+To generate a real AI summary, create a `.env` file in the project root:
+
+```
+GITHUB_TOKEN=<your-token>
+```
+
+The script reads this file automatically, so you can then run:
+
+```bash
+python scripts/generate_changelog.py
+```
+
+Alternatively, pass the token inline:
 
 ```bash
 GITHUB_TOKEN=<your-token> python scripts/generate_changelog.py
 ```
+
+> **Note:** `.env` is in `.gitignore` — your token will not be committed.
 
 To run the automated tests for the changelog generator:
 

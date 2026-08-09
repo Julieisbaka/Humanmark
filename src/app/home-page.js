@@ -1,5 +1,6 @@
 import { formatDate, formatPercent, scoreBenchmark, selectQuestions } from '../score.js';
 import { getBenchmark, loadBenchmarkDetails, renderMathIn, summarizeToolPolicy } from './shared.js';
+import { renderMarkdown } from './shared/markdown.js';
 import { getModels, getTopModel } from './runtime.js';
 import { createLatestTaskGuard } from './shared/async-guard.js';
 import { logAppEvent, logAppWarning } from './shared/telemetry.js';
@@ -33,12 +34,7 @@ export function renderHome(appData) {
 
 		const body = document.createElement('div');
 		body.className = 'changelog-body';
-		changelog.summary.split('\n').forEach((line, index, lines) => {
-			body.appendChild(document.createTextNode(line));
-			if (index < lines.length - 1) {
-				body.appendChild(document.createElement('br'));
-			}
-		});
+		body.innerHTML = renderMarkdown(changelog.summary);
 
 		const disclaimer = document.createElement('p');
 		disclaimer.className = 'changelog-disclaimer';

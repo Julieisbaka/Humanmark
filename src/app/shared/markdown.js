@@ -295,7 +295,10 @@ export function renderMarkdown(value) {
 		return '';
 	}
 
-	const normalized = normalizeLatexEnumerations(String(value)).replace(/\r\n/g, '\n').trim();
+	const normalized = normalizeLatexEnumerations(String(value))
+		.replace(/\r\n/g, '\n')
+		.replace(/(^|\n)(#{1,6} [^\n]+)/g, '\n\n$2\n')
+		.trim();
 	if (!normalized) {
 		return '';
 	}
@@ -307,8 +310,16 @@ export function renderMarkdown(value) {
 			const normalizedBlock = normalizeMathInput(block);
 			const { protectedText, tokens } = shieldMathSegments(normalizedBlock);
 			const lines = protectedText.split('\n').map((line) => line.trimEnd());
+			const headingMatch = lines.length === 1 && lines[0].match(/^(#{1,6})\s+(.+)$/);
 			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
 			const isOrderedList = lines.every((line) => /^\d+\.\s+/.test(line));
+
+			if (headingMatch) {
+				const level = Math.min(headingMatch[1].length, 6);
+				const markup = `<h${level}>${renderInlineMarkdownCore(headingMatch[2])}</h${level}>`;
+
+				return restoreMathSegments(markup, tokens);
+			}
 
 			if (isUnorderedList) {
 				const markup = `<ul>${lines

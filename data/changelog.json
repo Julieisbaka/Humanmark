@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-09T22:38:23.751704+00:00",
+  "generatedAt": "2026-08-09T22:50:00.837218+00:00",
   "generatedBy": "dry-run",
-  "headSha": "4620de629cbf9667607bd0106b60232b75f828b6",
-  "commitCount": 2,
+  "headSha": "6f6dfca21e84639c8c4615651669b90ba4098339",
+  "commitCount": 3,
   "summary": "### New features\n- Added weekly AI-generated changelog surfaced on the homepage.\n\n### Improvements\n- Scores and benchmark data are now refreshed on a regular schedule.\n\n### Data updates\n- Latest model scores have been synced from upstream providers."
 }
