@@ -32,8 +32,10 @@ These commands will refresh:
 
 - `data/scores/current.json`
 - `data/benchmarks/index.json`
+- `data/benchmarks/*.json`
 
 ## Notes
 
-- The app reads data from the generated JSON files under the data directory.
+- The app reads committed snapshot JSON files under the `data` directory.
+- Temporary parser output stays under `data/benchmarks/generated/` and is not meant to be committed.
 - If the browser shows stale content, use a hard refresh.
