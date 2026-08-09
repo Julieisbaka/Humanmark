@@ -48,6 +48,7 @@ jobs:
           python scripts/benchmark.py Idavidrein/gpqa --task gpqa_diamond --split train --output data/benchmarks/generated/gpqa_diamond.json
           python scripts/benchmark.py cais/hle --split test --output data/benchmarks/generated/humanitys_last_exam.json
           python scripts/benchmark.py TIGER-Lab/MMLU-Pro --split test --output data/benchmarks/generated/mmlu_pro.json
+          python scripts/benchmark.py di-zhang-fdu/AIME_1983_2024 --split train --output data/benchmarks/generated/aime.json
           python scripts/build_benchmark_index.py
 
       - name: Refresh score snapshots for the site build
