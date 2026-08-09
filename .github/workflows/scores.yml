@@ -6,7 +6,8 @@ on:
     - cron: '0 6 * * 1'
 
 permissions:
-  contents: read
+  contents: write
+  models: read
 
 jobs:
   sync-scores:
@@ -18,6 +19,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -31,4 +34,21 @@ jobs:
 
       - name: Refresh model scores
         run: python scripts/sync_scores.py
+
+      - name: Generate AI changelog
+        run: python scripts/generate_changelog.py --days 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/changelog.json
+          if git diff --cached --quiet; then
+            echo "No changelog changes to commit."
+          else
+            git commit -m "chore: update AI changelog [skip ci]"
+            git push origin HEAD
+          fi
 

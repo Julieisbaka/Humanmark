@@ -30,6 +30,8 @@ export async function loadAppData() {
 		return { benchmarks: {} };
 	});
 
+	const changelog = await loadJSON(`${dataRoot}/changelog.json`).catch(() => null);
+
 	logAppEvent('appData.load.success', {
 		scope: 'appData',
 		outcome: 'success',
@@ -42,6 +44,7 @@ export async function loadAppData() {
 		dataRoot,
 		benchmarksData,
 		currentScores,
+		changelog,
 		benchmarkIndex: benchmarksData.benchmarks ?? [],
 	};
 }
