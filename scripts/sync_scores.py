@@ -5,6 +5,10 @@ JSON object that already matches the repository score snapshot shape, or a
 wrapper object containing the snapshot under a `current` key.
 
 On each successful run, the latest snapshot is written to `current.json`.
+
+Benchmark-to-Artificial-Analysis key mappings are loaded from
+``data/benchmarks/config.json`` via the ``artificialAnalysisKeys`` field on
+each benchmark definition.  No Python changes are needed when adding benchmarks.
 """
 
 from __future__ import annotations
@@ -17,6 +21,10 @@ from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+try:
+    from scripts.build_benchmark_index import load_benchmark_definitions
+except ModuleNotFoundError:
+    from build_benchmark_index import load_benchmark_definitions
 
 DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/data/llms/models"
 
@@ -39,7 +47,7 @@ def _load_json_from_url(url: str, api_key: str | None) -> dict[str, Any]:
     return json.loads(payload)
 
 
-def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+def _extract_snapshot(payload: dict[str, Any], benchmark_configs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if {"generatedAt", "methodologyUrl", "benchmarks"}.issubset(payload.keys()):
         return payload
 
@@ -51,6 +59,7 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
 
     if isinstance(payload.get("data"), list):
         models = payload["data"]
+        configs = benchmark_configs if benchmark_configs is not None else load_benchmark_definitions()
 
         def _extract_score(evaluations: dict[str, Any], keys: list[str]) -> Any:
             for key in keys:
@@ -89,15 +98,15 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
                 "models": benchmark_models,
             }
 
+        benchmarks: dict[str, Any] = {
+            cfg["id"]: build_benchmark(cfg["id"], cfg["name"], cfg.get("artificialAnalysisKeys") or [cfg["id"]])
+            for cfg in configs
+        }
+
         return {
             "generatedAt": payload.get("generatedAt") or payload.get("timestamp") or "unknown",
             "methodologyUrl": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
-            "benchmarks": {
-                "aime": build_benchmark("aime", "AIME", ["aime", "aime_25"]),
-                "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
-                "humanitys_last_exam": build_benchmark("humanitys_last_exam", "Humanity's Last Exam", ["humanitys_last_exam", "hle", "cais_hle"]),
-                "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),
-            },
+            "benchmarks": benchmarks,
         }
 
     raise ValueError(
