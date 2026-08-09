@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.generate_changelog import (
     COPILOT_API_URL,
+    DEFAULT_COPILOT_INTEGRATION_ID,
     _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
@@ -87,6 +88,7 @@ class GenerateChangelogTests(unittest.TestCase):
             captured["url"] = request.full_url
             captured["authorization"] = request.headers.get("Authorization")
             captured["content_type"] = request.headers.get("Content-type")
+            captured["integration_id"] = request.headers.get("Copilot-integration-id")
             captured["payload"] = json.loads(request.data.decode("utf-8"))
             captured["timeout"] = timeout
             return _FakeHTTPResponse(
@@ -111,6 +113,10 @@ class GenerateChangelogTests(unittest.TestCase):
         self.assertEqual(COPILOT_API_URL, captured["url"])
         self.assertIn("token123", captured["authorization"] or "")
         self.assertEqual("application/json", captured["content_type"])
+        self.assertEqual(
+            DEFAULT_COPILOT_INTEGRATION_ID,
+            captured["integration_id"],
+        )
         self.assertEqual(60, captured["timeout"])
         self.assertEqual("gpt-4o", captured["payload"]["model"])
         self.assertEqual("system", captured["payload"]["messages"][0]["role"])
@@ -126,6 +132,34 @@ class GenerateChangelogTests(unittest.TestCase):
         ):
             with self.assertRaisesRegex(ValueError, "Unexpected Copilot API response"):
                 _call_copilot(["fix: handle errors"], "token123")
+
+    def test_call_copilot_uses_configurable_integration_id(self):
+        captured = {}
+
+        def fake_urlopen(request, timeout):
+            captured["integration_id"] = request.headers.get("Copilot-integration-id")
+            return _FakeHTTPResponse(
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": "### Improvements\n- Added changelog generation."
+                            }
+                        }
+                    ]
+                }
+            )
+
+        with patch.dict(
+            "scripts.generate_changelog.os.environ",
+            {"COPILOT_INTEGRATION_ID": "my-custom-integration"},
+        ), patch(
+            "scripts.generate_changelog.urlopen",
+            side_effect=fake_urlopen,
+        ):
+            _call_copilot(["feat: add changelog"], "token123")
+
+        self.assertEqual("my-custom-integration", captured["integration_id"])
 
     def test_generate_changelog_writes_expected_json_payload(self):
         with tempfile.TemporaryDirectory() as temp_dir:

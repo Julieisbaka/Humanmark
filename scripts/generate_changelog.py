@@ -27,6 +27,7 @@ from urllib.error import HTTPError, URLError
 
 COPILOT_API_URL = "https://api.githubcopilot.com/chat/completions"
 MODEL_NAME = "gpt-4o"
+DEFAULT_COPILOT_INTEGRATION_ID = "copilot-developer-cli"
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant that writes concise, human-readable release "
@@ -110,10 +111,15 @@ def _call_copilot(commit_messages: list[str], token: str) -> str:
         }
     ).encode("utf-8")
 
+    integration_id = os.getenv(
+        "COPILOT_INTEGRATION_ID", DEFAULT_COPILOT_INTEGRATION_ID
+    )
+
     headers = {
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
+        "Copilot-Integration-Id": integration_id,
     }
 
     request = Request(COPILOT_API_URL, data=payload, headers=headers, method="POST")
