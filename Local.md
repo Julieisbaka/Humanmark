@@ -32,7 +32,7 @@ pip install datasets
 Set your Hugging Face token (required to download datasets):
 
 ```bash
-export HF_TOKEN=<your-huggingface-token>
+export HF_TOKEN=your-huggingface-token
 ```
 
 You can create a token at <https://huggingface.co/settings/tokens>. A read-only
