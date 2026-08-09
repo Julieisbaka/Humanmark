@@ -21,11 +21,10 @@ from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
-_CONFIG_FILE = Path(__file__).resolve().parents[1] / "data" / "benchmarks" / "config.json"
-
-
-def _load_benchmark_config(config_file: Path = _CONFIG_FILE) -> list[dict[str, Any]]:
-    return json.loads(config_file.read_text(encoding="utf-8"))
+try:
+    from scripts.build_benchmark_index import load_benchmark_definitions
+except ModuleNotFoundError:
+    from build_benchmark_index import load_benchmark_definitions
 
 DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/data/llms/models"
 
@@ -48,7 +47,7 @@ def _load_json_from_url(url: str, api_key: str | None) -> dict[str, Any]:
     return json.loads(payload)
 
 
-def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
+def _extract_snapshot(payload: dict[str, Any], benchmark_configs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     if {"generatedAt", "methodologyUrl", "benchmarks"}.issubset(payload.keys()):
         return payload
 
@@ -60,6 +59,7 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
 
     if isinstance(payload.get("data"), list):
         models = payload["data"]
+        configs = benchmark_configs if benchmark_configs is not None else load_benchmark_definitions()
 
         def _extract_score(evaluations: dict[str, Any], keys: list[str]) -> Any:
             for key in keys:
@@ -98,10 +98,9 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
                 "models": benchmark_models,
             }
 
-        benchmark_configs = _load_benchmark_config()
         benchmarks: dict[str, Any] = {
             cfg["id"]: build_benchmark(cfg["id"], cfg["name"], cfg.get("artificialAnalysisKeys") or [cfg["id"]])
-            for cfg in benchmark_configs
+            for cfg in configs
         }
 
         return {
