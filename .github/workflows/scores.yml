@@ -6,7 +6,7 @@ on:
     - cron: '0 6 * * 1'
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   sync-scores:
@@ -18,6 +18,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -32,3 +34,41 @@ jobs:
       - name: Refresh model scores
         run: python scripts/sync_scores.py
 
+      - name: Determine changelog base commit from last Pages update
+        run: |
+          LAST_PAGES_MARKER="$(git log --grep='^pages updated for ' --format='%s' -n 1)"
+          if [ -z "$LAST_PAGES_MARKER" ]; then
+            echo "No Pages marker commit found. Falling back to --days window."
+            exit 0
+          fi
+
+          LAST_PAGES_SHA="$(echo "$LAST_PAGES_MARKER" | sed -E 's/^pages updated for ([0-9a-f]+).*/\1/')"
+          if git rev-parse --verify --quiet "${LAST_PAGES_SHA}^{commit}" >/dev/null; then
+            echo "SINCE_SHA=$LAST_PAGES_SHA" >> "$GITHUB_ENV"
+            echo "Using commits after Pages update marker SHA: $LAST_PAGES_SHA"
+          else
+            echo "Could not resolve marker SHA '$LAST_PAGES_SHA'. Falling back to --days window."
+          fi
+
+      - name: Generate AI changelog
+        run: python scripts/generate_changelog.py --days 7
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Commit updated data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/changelog.json
+          if git diff --cached --quiet; then
+            echo "No changelog changes to commit."
+          else
+            git commit -m "chore: update AI changelog [skip ci]"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
+
+      - name: Write Pages update marker commit
+        run: |
+          HEAD_SHA="$(git rev-parse HEAD)"
+          git commit --allow-empty -m "pages updated for ${HEAD_SHA}"
+          git push origin HEAD:"$GITHUB_REF_NAME"
