@@ -212,6 +212,65 @@ test('questions page paginates and transitions from Next to Score button', async
 	dom.window.close();
 });
 
+test('questions page drops persisted answers for crossed-out choices', async () => {
+	const dom = setupDom(`
+		<div data-role="questions-status"></div>
+		<div data-role="questions-shell"></div>
+	`);
+
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async (input) => {
+		const url = String(input);
+		if (url.includes('/bench-crossout.json')) {
+			return new Response(JSON.stringify({
+				questions: [
+					{ id: 'q1', prompt: 'P1', choices: ['A', 'B'], answerIndex: 0 },
+					{ id: 'q2', prompt: 'P2', choices: ['C', 'D'], answerIndex: 1 },
+				],
+			}), { status: 200, headers: { 'content-type': 'application/json' } });
+		}
+		throw new Error(`Unexpected fetch URL: ${url}`);
+	};
+
+	localStorage.setItem(SETTINGS_KEY, JSON.stringify({ questionsPerPage: 1, leaderboardLimit: 50, sortNumericChoices: true }));
+	localStorage.setItem(STATE_KEY, JSON.stringify({
+		benchmarkId: 'bench-crossout',
+		questionIds: ['q1', 'q2'],
+		answers: { q1: 1 },
+		crossedOutChoices: { q1: [1] },
+		currentQuestionPage: 1,
+	}));
+
+	await renderQuestions({
+		dataRoot: 'data',
+		currentScores: { benchmarks: {} },
+		benchmarkIndex: [{
+			id: 'bench-crossout',
+			file: 'bench-crossout.json',
+			name: 'Crossout Bench',
+			description: 'desc',
+			options: 2,
+			source: { dataset: 'ds-crossout' },
+		}],
+	});
+
+	const crossedOutInput = document.querySelector('input[name="q1"][value="1"]');
+	assert.ok(crossedOutInput);
+	assert.equal(crossedOutInput.disabled, true);
+	assert.equal(crossedOutInput.checked, false);
+	assert.equal(document.querySelector('input[name="q1"]:checked'), null);
+
+	const nextButton = document.querySelector('[data-role="next-page"]');
+	assert.ok(nextButton);
+	nextButton.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+
+	const savedState = JSON.parse(localStorage.getItem(STATE_KEY) ?? '{}');
+	assert.deepEqual(savedState.answers ?? {}, {});
+
+	globalThis.fetch = originalFetch;
+	dom.window.close();
+});
+
 test('results page respects leaderboard truncation setting and show-more expansion', async () => {
 	const dom = setupDom(`
 		<div data-role="results-meta"></div>
