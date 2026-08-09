@@ -196,6 +196,7 @@ class GenerateChangelogTests(unittest.TestCase):
                 "- fix: handle API fallback",
                 payload["summary"],
             )
+
     def test_bot_commits_are_filtered_from_commit_list(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = pathlib.Path(temp_dir) / "changelog.json"
