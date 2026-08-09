@@ -138,6 +138,7 @@ select,
 button,
 input {
 	font: inherit;
+	touch-action: manipulation;
 }
 
 select,
@@ -185,6 +186,7 @@ select {
 	background: rgba(12, 19, 36, 0.92);
 	border-color: var(--border);
 	color: var(--text);
+	cursor: pointer;
 	padding: 0 14px;
 }
 
