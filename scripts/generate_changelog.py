@@ -5,8 +5,8 @@ to the GitHub Copilot chat completions API for summarization, and writes the
 result to ``data/changelog.json``.
 
 Required environment variables:
-  GITHUB_TOKEN  — a GitHub token with ``models: read`` permission (automatically
-                  provided by GitHub Actions).
+  GITHUB_TOKEN  — a GitHub token used to call the GitHub Copilot chat
+                  completions API.
 
 Optional environment variables:
   SINCE_SHA     — if set, commits are collected starting from this SHA
@@ -168,7 +168,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--token",
         default=os.getenv("GITHUB_TOKEN"),
-        help="GitHub token with models:read permission.",
+        help="GitHub token used to call the Copilot API.",
     )
     return parser.parse_args()
 

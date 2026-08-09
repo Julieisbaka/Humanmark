@@ -7,7 +7,6 @@ on:
 
 permissions:
   contents: write
-  models: read
 
 jobs:
   sync-scores:
@@ -51,4 +50,3 @@ jobs:
             git commit -m "chore: update AI changelog [skip ci]"
             git push origin HEAD
           fi
-
