@@ -55,10 +55,11 @@ These commands will refresh:
 
 - `data/scores/current.json`
 - `data/benchmarks/index.json`
-- `data/benchmarks/*.json`
+- benchmark snapshot files under `data/benchmarks/` such as `data/benchmarks/aime.json`
 
 ## Notes
 
 - The app reads committed snapshot JSON files under the `data` directory.
+- `data/benchmarks/config.json` is committed source configuration, not generated snapshot output.
 - Temporary parser output stays under `data/benchmarks/generated/` and is not meant to be committed.
 - If the browser shows stale content, use a hard refresh.
