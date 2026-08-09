@@ -2,6 +2,7 @@ import json
 import pathlib
 import tempfile
 import unittest
+from urllib.error import HTTPError
 from unittest.mock import patch
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -12,6 +13,7 @@ if str(ROOT) not in sys.path:
 
 from scripts.generate_changelog import (
     COPILOT_API_URL,
+    _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
     generate_changelog,
@@ -65,6 +67,18 @@ class GenerateChangelogTests(unittest.TestCase):
 
         self.assertEqual("No significant changes were made this week.", summary)
         mock_urlopen.assert_not_called()
+
+    def test_build_fallback_summary_formats_recent_commits(self):
+        summary = _build_fallback_summary(
+            ["feat: add changelog", "fix: handle API fallback"]
+        )
+
+        self.assertEqual(
+            "### Recent updates\n"
+            "- feat: add changelog\n"
+            "- fix: handle API fallback",
+            summary,
+        )
 
     def test_call_copilot_sends_expected_payload_and_parses_response(self):
         captured = {}
@@ -145,6 +159,42 @@ class GenerateChangelogTests(unittest.TestCase):
             mock_call_copilot.assert_called_once_with(
                 ["feat: add changelog", "fix: polish disclaimer"],
                 "token123",
+            )
+
+    def test_generate_changelog_falls_back_when_copilot_request_fails(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = pathlib.Path(temp_dir) / "data" / "changelog.json"
+
+            with patch(
+                "scripts.generate_changelog._get_commits_since_days",
+                return_value=["feat: add changelog", "fix: handle API fallback"],
+            ), patch(
+                "scripts.generate_changelog._call_copilot",
+                side_effect=HTTPError(
+                    COPILOT_API_URL,
+                    400,
+                    "Bad Request",
+                    hdrs=None,
+                    fp=None,
+                ),
+            ), patch(
+                "scripts.generate_changelog._get_head_sha",
+                return_value="cafebabe",
+            ):
+                written_path = generate_changelog(
+                    output_path=output_path,
+                    since_sha=None,
+                    token="token123",
+                    days=7,
+                )
+
+            self.assertEqual(output_path, written_path)
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                "### Recent updates\n"
+                "- feat: add changelog\n"
+                "- fix: handle API fallback",
+                payload["summary"],
             )
     def test_bot_commits_are_filtered_from_commit_list(self):
         with tempfile.TemporaryDirectory() as temp_dir:

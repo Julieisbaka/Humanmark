@@ -82,6 +82,16 @@ def _get_head_sha() -> str:
     return result.stdout.strip()
 
 
+def _build_fallback_summary(commit_messages: list[str]) -> str:
+    if not commit_messages:
+        return "No significant changes were made this week."
+
+    bullets = "\n".join(f"- {message}" for message in commit_messages[:10])
+    if len(commit_messages) > 10:
+        bullets += f"\n- Plus {len(commit_messages) - 10} more commit(s)."
+    return f"### Recent updates\n{bullets}"
+
+
 def _call_copilot(commit_messages: list[str], token: str) -> str:
     if not commit_messages:
         return "No significant changes were made this week."
@@ -130,7 +140,10 @@ def generate_changelog(
 
     commits = [c for c in commits if not _is_bot_commit(c)]
 
-    summary = _call_copilot(commits, token)
+    try:
+        summary = _call_copilot(commits, token)
+    except (HTTPError, URLError):
+        summary = _build_fallback_summary(commits)
     head_sha = _get_head_sha()
 
     changelog = {
