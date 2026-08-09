@@ -192,6 +192,7 @@ export async function renderQuestions(appData) {
 																name="${escapeAttribute(question.id)}"
 																value="${choiceIndex}"
 																${draftAnswers?.[question.id] === choiceIndex ? 'checked' : ''}
+																${isCrossedOut ? 'disabled' : ''}
 															/>
 																<span class="choice-text content-truncate content-truncate--answer" title="${escapeAttribute(String(choice ?? ''))}">${renderInlineMarkdown(choice)}</span>
 														</label>
@@ -302,6 +303,13 @@ export async function renderQuestions(appData) {
 		}
 
 		draftCrossedOutChoices = nextCrossedOutChoices;
+
+		if (existing.has(choiceIndex) && draftAnswers?.[questionId] === choiceIndex) {
+			const nextAnswers = { ...draftAnswers };
+			delete nextAnswers[questionId];
+			draftAnswers = nextAnswers;
+		}
+
 		scheduleCrossoutSave();
 		renderPage();
 	});
