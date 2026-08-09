@@ -21,11 +21,34 @@ Then open:
 
 ## Refresh benchmark data
 
-If the benchmark and score data files need to be regenerated, run:
+Regenerating benchmark data requires two stages. First, run the benchmark
+parsers to download and convert each dataset into the temporary
+`data/benchmarks/generated/` directory:
 
 ```bash
-python scripts/sync_scores.py
+python scripts/benchmark.py di-zhang-fdu/AIME_1983_2024 \
+    --split train \
+    --output data/benchmarks/generated/aime.json
+
+python scripts/benchmark.py Idavidrein/gpqa \
+    --task gpqa_diamond \
+    --split train \
+    --output data/benchmarks/generated/gpqa_diamond.json
+
+python scripts/benchmark.py cais/hle \
+    --split test \
+    --output data/benchmarks/generated/humanitys_last_exam.json
+
+python scripts/benchmark.py TIGER-Lab/MMLU-Pro \
+    --split test \
+    --output data/benchmarks/generated/mmlu_pro.json
+```
+
+Then build the index and refresh the score snapshot:
+
+```bash
 python scripts/build_benchmark_index.py
+python scripts/sync_scores.py
 ```
 
 These commands will refresh:
