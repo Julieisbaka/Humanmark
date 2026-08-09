@@ -12,12 +12,23 @@ This project is a static web app that can be served locally with Python's built-
 From the project root, run:
 
 ```bash
-python -m http.server 8000 --directory .
+npm run setup:local
 ```
 
 Then open:
 
 - <http://localhost:8000/>
+
+This command refreshes the benchmark datasets, rebuilds the benchmark index,
+refreshes the score snapshot, starts Python's local HTTP server, and prints the
+local URL. If setup fails, it also prints the error details in the terminal.
+
+If you only want to serve the already-generated files without refreshing data,
+you can still run:
+
+```bash
+python -m http.server 8000 --directory .
+```
 
 ## Refresh benchmark data
 
