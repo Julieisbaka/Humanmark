@@ -4,6 +4,9 @@ The parser workflow writes compact question files to a temporary generated
 directory. This script copies each benchmark into its final home under
 `data/benchmarks/` and writes the manifest-only `data/benchmarks/index.json`
 file that the client reads first.
+
+Benchmark definitions are loaded from ``data/benchmarks/config.json``.  To add
+a new benchmark, add an entry to that file — no Python changes are required.
 """
 
 from __future__ import annotations
@@ -14,69 +17,15 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+_CONFIG_FILE = Path(__file__).resolve().parents[1] / "data" / "benchmarks" / "config.json"
 
-BENCHMARK_DEFINITIONS: list[dict[str, Any]] = [
-    {
-        "id": "aime",
-        "name": "AIME",
-        "description": "A standardized integer-answer mathematics benchmark scored by exact answer matching.",
-        "options": None,
-        "scoring": {"method": "aime", "mode": "standardized-answer", "answerFormat": "integer"},
-        "source": {"dataset": "di-zhang-fdu/AIME_1983_2024", "subset": None, "split": "train"},
-        "tags": ["mathematics", "integer answers", "standardized answer"],
-        "toolPolicy": {
-            "modelToolsAllowed": False,
-            "allowedTools": [],
-        },
-        "generatedQuestionsFile": "aime.json",
-        "file": "aime.json",
-    },
-    {
-        "id": "gpqa_diamond",
-        "name": "GPQA Diamond",
-        "description": "A hard 4-option science benchmark that rewards careful reasoning over guesswork.",
-        "options": 4,
-        "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 4},
-        "source": {"dataset": "Idavidrein/gpqa", "subset": "gpqa_diamond", "split": "train"},
-        "tags": ["science", "reasoning", "4 options"],
-        "toolPolicy": {
-            "modelToolsAllowed": False,
-            "allowedTools": [],
-        },
-        "generatedQuestionsFile": "gpqa_diamond.json",
-        "file": "gpqa_diamond.json",
-    },
-    {
-        "id": "humanitys_last_exam",
-        "name": "Humanity's Last Exam",
-        "description": "A frontier closed-ended academic benchmark spanning mathematics, sciences, and the humanities.",
-        "options": 4,
-        "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 4},
-        "source": {"dataset": "cais/hle", "subset": None, "split": "test"},
-        "tags": ["knowledge", "reasoning", "closed-ended", "4 options"],
-        "toolPolicy": {
-            "modelToolsAllowed": False,
-            "allowedTools": [],
-        },
-        "generatedQuestionsFile": "humanitys_last_exam.json",
-        "file": "humanitys_last_exam.json",
-    },
-    {
-        "id": "mmlu_pro",
-        "name": "MMLU-Pro",
-        "description": "A 10-option knowledge benchmark that makes broad coverage and precision both matter.",
-        "options": 10,
-        "scoring": {"method": "pass@1", "mode": "multiple-choice", "options": 10},
-        "source": {"dataset": "TIGER-Lab/MMLU-Pro", "subset": None, "split": "test"},
-        "tags": ["knowledge", "broad coverage", "10 options"],
-        "toolPolicy": {
-            "modelToolsAllowed": False,
-            "allowedTools": [],
-        },
-        "generatedQuestionsFile": "mmlu_pro.json",
-        "file": "mmlu_pro.json",
-    },
-]
+
+def load_benchmark_definitions(config_file: Path = _CONFIG_FILE) -> list[dict[str, Any]]:
+    """Load benchmark definitions from the JSON config file."""
+    return json.loads(config_file.read_text(encoding="utf-8"))
+
+
+BENCHMARK_DEFINITIONS: list[dict[str, Any]] = load_benchmark_definitions()
 
 
 def _load_json(path: Path) -> Any:

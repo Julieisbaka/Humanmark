@@ -5,6 +5,10 @@ JSON object that already matches the repository score snapshot shape, or a
 wrapper object containing the snapshot under a `current` key.
 
 On each successful run, the latest snapshot is written to `current.json`.
+
+Benchmark-to-Artificial-Analysis key mappings are loaded from
+``data/benchmarks/config.json`` via the ``artificialAnalysisKeys`` field on
+each benchmark definition.  No Python changes are needed when adding benchmarks.
 """
 
 from __future__ import annotations
@@ -17,6 +21,11 @@ from typing import Any, cast
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
+_CONFIG_FILE = Path(__file__).resolve().parents[1] / "data" / "benchmarks" / "config.json"
+
+
+def _load_benchmark_config(config_file: Path = _CONFIG_FILE) -> list[dict[str, Any]]:
+    return json.loads(config_file.read_text(encoding="utf-8"))
 
 DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/data/llms/models"
 
@@ -89,15 +98,16 @@ def _extract_snapshot(payload: dict[str, Any]) -> dict[str, Any]:
                 "models": benchmark_models,
             }
 
+        benchmark_configs = _load_benchmark_config()
+        benchmarks: dict[str, Any] = {
+            cfg["id"]: build_benchmark(cfg["id"], cfg["name"], cfg.get("artificialAnalysisKeys") or [cfg["id"]])
+            for cfg in benchmark_configs
+        }
+
         return {
             "generatedAt": payload.get("generatedAt") or payload.get("timestamp") or "unknown",
             "methodologyUrl": "https://artificialanalysis.ai/methodology/intelligence-benchmarking",
-            "benchmarks": {
-                "aime": build_benchmark("aime", "AIME", ["aime", "aime_25"]),
-                "gpqa_diamond": build_benchmark("gpqa_diamond", "GPQA Diamond", ["gpqa", "gpqa_diamond"]),
-                "humanitys_last_exam": build_benchmark("humanitys_last_exam", "Humanity's Last Exam", ["humanitys_last_exam", "hle", "cais_hle"]),
-                "mmlu_pro": build_benchmark("mmlu_pro", "MMLU-Pro", ["mmlu_pro"]),
-            },
+            "benchmarks": benchmarks,
         }
 
     raise ValueError(
