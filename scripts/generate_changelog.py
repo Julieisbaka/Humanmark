@@ -100,8 +100,6 @@ def _call_copilot(commit_messages: list[str], token: str) -> str:
         "Authorization": f"Bearer {token}",
         "Content-Type": "application/json",
         "Accept": "application/json",
-        "Copilot-Integration-Id": "vscode-chat",
-        "Editor-Version": "vscode/1.95.0",
     }
 
     request = Request(COPILOT_API_URL, data=payload, headers=headers, method="POST")
@@ -109,7 +107,10 @@ def _call_copilot(commit_messages: list[str], token: str) -> str:
     with urlopen(request, timeout=60) as response:
         body = json.loads(response.read().decode("utf-8"))
 
-    return body["choices"][0]["message"]["content"].strip()
+    choices = body.get("choices")
+    if not choices:
+        raise ValueError(f"Unexpected Copilot API response: {body}")
+    return choices[0]["message"]["content"].strip()
 
 
 def generate_changelog(
