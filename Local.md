@@ -21,6 +21,25 @@ Then open:
 
 ## Refresh benchmark data
 
+### Prerequisites
+
+Install the required Python tooling:
+
+```bash
+pip install datasets
+```
+
+Set your Hugging Face token (required to download datasets):
+
+```bash
+export HF_TOKEN=your-huggingface-token
+```
+
+You can create a token at <https://huggingface.co/settings/tokens>. A read-only
+token is sufficient.
+
+### Generate benchmark files
+
 Regenerating benchmark data requires two stages. First, run the benchmark
 parsers to download and convert each dataset into the temporary
 `data/benchmarks/generated/` directory:
