@@ -6,7 +6,7 @@ on:
     - cron: '0 12 * * 1'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -25,6 +25,7 @@ jobs:
       - name: Check out repository
         uses: actions/checkout@v4
         with:
+          fetch-depth: 0
           ref: ${{ github.ref_name }}
 
       - name: Set up Python
@@ -64,6 +65,18 @@ jobs:
 
       - name: Build benchmark index
         run: python scripts/build_benchmark_index.py
+
+      - name: Commit refreshed benchmark data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/benchmarks/
+          if git diff --cached --quiet; then
+            echo "No benchmark data changes to commit."
+          else
+            git commit -m "chore: update benchmark data [skip ci]"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
 
       - name: Set up Pages
         uses: actions/configure-pages@v5

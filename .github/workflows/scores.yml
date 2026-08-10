@@ -6,7 +6,7 @@ on:
     - cron: '0 6 * * 1'
 
 permissions:
-  contents: read
+  contents: write
   pages: write
   id-token: write
 
@@ -40,6 +40,18 @@ jobs:
 
       - name: Refresh model scores
         run: python scripts/sync_scores.py
+
+      - name: Commit refreshed scores data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/scores/
+          if git diff --cached --quiet; then
+            echo "No scores data changes to commit."
+          else
+            git commit -m "chore: update scores data [skip ci]"
+            git push origin HEAD:"$GITHUB_REF_NAME"
+          fi
 
       - name: Set up Pages
         uses: actions/configure-pages@v5
