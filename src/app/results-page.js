@@ -178,12 +178,13 @@ export async function renderResults(appData) {
 		}
 
 		if (leaderboardActions && leaderboardShowMore) {
+			const isUnfiltered = !query && filterValue === 'all';
 			const canShowMore = defaultHiddenRowCount > 0;
-			leaderboardActions.hidden = !canShowMore;
-			if (useDefaultLimit) {
-				leaderboardShowMore.textContent = `Show more models (${defaultHiddenRowCount} hidden)`;
-			} else {
+			leaderboardActions.hidden = !(canShowMore && (isUnfiltered || showAllLeaderboardRows));
+			if (showAllLeaderboardRows) {
 				leaderboardShowMore.textContent = 'Hide additional models';
+			} else {
+				leaderboardShowMore.textContent = `Show more models (${defaultHiddenRowCount} hidden)`;
 			}
 		}
 
