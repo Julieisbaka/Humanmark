@@ -50,7 +50,13 @@ jobs:
             echo "No scores data changes to commit."
           else
             git commit -m "chore: update scores data [skip ci]"
-            git push origin HEAD:"$GITHUB_REF_NAME"
+            for i in 1 2 3; do
+              git fetch origin "$GITHUB_REF_NAME"
+              git rebase "origin/$GITHUB_REF_NAME" || { git rebase --abort; exit 1; }
+              git push origin HEAD:"$GITHUB_REF_NAME" && break
+              echo "Push attempt $i failed, retrying..."
+              [ "$i" -eq 3 ] && exit 1
+            done
           fi
 
       - name: Set up Pages
