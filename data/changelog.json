@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-09T23:51:11.166826+00:00",
+  "generatedAt": "2026-08-10T00:04:25.402824+00:00",
   "generatedBy": "copilot",
-  "headSha": "bfa48b8707848fe73ab114ee75d0ee2c8360bde3",
-  "commitCount": 46,
-  "summary": "### Recent updates\n- chore: remove redundant changelog integration env override\n- fix: send required Copilot integration header for changelog API\n- ci: split AI changelog into separate workflow\n- test: keep changelog tests formatted\n- fix: fall back when changelog API fails\n- Initial plan\n- docs(Local.md): fix HF_TOKEN placeholder to avoid bash redirection\n- Fix Local.md: add pip install datasets and HF_TOKEN setup before benchmark commands\n- Initial plan\n- Clarify benchmark snapshot docs\n- Plus 36 more commit(s)."
+  "headSha": "ea845ea8b7e4a6c1899506492749fa877e6cd494",
+  "commitCount": 6,
+  "summary": "### Recent updates\n- Wire pages workflow to changelog workflow\n- fix: add sitemap.xml to fix CI build failure\n- Initial plan\n- fix: generate AIME benchmark in pages workflow\n- pages updated for 1af60e17bc87a647b1a3fe8447dd804199c1df72\n- Initial plan"
 }
