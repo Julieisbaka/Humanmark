@@ -6,7 +6,13 @@ on:
     - cron: '0 6 * * 1'
 
 permissions:
-  contents: read
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   sync-scores:
@@ -33,3 +39,32 @@ jobs:
 
       - name: Refresh model scores
         run: python scripts/sync_scores.py
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v5
+
+      - name: Build static site
+        run: |
+          rm -rf dist
+          mkdir -p dist
+          cp -R src/. dist/
+          cp -R data dist/
+          cp robots.txt dist/
+          cp sitemap.xml dist/
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: sync-scores
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+
