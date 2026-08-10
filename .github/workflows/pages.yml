@@ -18,15 +18,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  update-changelog:
+    if: github.event_name != 'push' || (!contains(github.event.head_commit.message, 'pages updated for') && github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
+    uses: ./.github/workflows/changelog.yml
+    secrets: inherit
+
   build:
     if: github.event_name != 'push' || (!contains(github.event.head_commit.message, 'pages updated for') && github.actor != 'github-actions[bot]' && (contains(github.event.head_commit.message, '#Force-update-pages') || contains(toJson(github.event.commits), '#Force-update-pages')))
     runs-on: ubuntu-latest
+    needs: update-changelog
     env:
       HF_TOKEN: ${{ secrets.HF_TOKEN }}
       ARTIFICIAL_ANALYSIS_API_KEY: ${{ secrets.ARTIFICIAL_ANALYSIS_API_KEY }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
 
       - name: Set up Pages
         uses: actions/configure-pages@v5
