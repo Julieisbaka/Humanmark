@@ -178,11 +178,13 @@ export async function renderResults(appData) {
 		}
 
 		if (leaderboardActions && leaderboardShowMore) {
-			const shouldShowAction = useDefaultLimit && defaultHiddenRowCount > 0;
-			leaderboardActions.hidden = !shouldShowAction;
-			leaderboardShowMore.textContent = shouldShowAction
-				? `Show more models (${defaultHiddenRowCount} hidden)`
-				: 'Show more models';
+			const canShowMore = defaultHiddenRowCount > 0;
+			leaderboardActions.hidden = !canShowMore;
+			if (useDefaultLimit) {
+				leaderboardShowMore.textContent = `Show more models (${defaultHiddenRowCount} hidden)`;
+			} else {
+				leaderboardShowMore.textContent = 'Hide additional models';
+			}
 		}
 
 		if (!leaderboardBody) {
@@ -221,7 +223,7 @@ export async function renderResults(appData) {
 	leaderboardSearch?.addEventListener('input', renderLeaderboardRows);
 	leaderboardFilter?.addEventListener('change', renderLeaderboardRows);
 	leaderboardShowMore?.addEventListener('click', () => {
-		showAllLeaderboardRows = true;
+		showAllLeaderboardRows = !showAllLeaderboardRows;
 		renderLeaderboardRows();
 	});
 	renderLeaderboardRows();
