@@ -1,6 +1,7 @@
 name: Generate AI changelog
 
 on:
+  workflow_call:
   workflow_dispatch:
   schedule:
     - cron: '5 6 * * 1'
@@ -57,6 +58,7 @@ jobs:
           fi
 
       - name: Write Pages update marker commit
+        if: github.event_name != 'workflow_call'
         run: |
           HEAD_SHA="$(git rev-parse HEAD)"
           git commit --allow-empty -m "pages updated for ${HEAD_SHA}"
