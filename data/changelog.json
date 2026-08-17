@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-08-10T18:41:38.632500+00:00",
+  "generatedAt": "2026-08-17T06:19:32.069481+00:00",
   "generatedBy": "copilot",
-  "headSha": "a8446469ddea3c1de49e0faa072fd55cb2c6a045",
-  "commitCount": 1,
-  "summary": "### Recent updates\n- pages updated for 0bc09f752b9ffb3ba97c156e4f077750de769d81"
+  "headSha": "ae97639364748c1ac4168f322af70a73d6391f8f",
+  "commitCount": 3,
+  "summary": "### Recent updates\n- pages updated for c44f0aaf8655ef83c368c4e9c4c565b8a0adef5c\n- Fix leaderboard show-more button label and visibility during filtering\n- Toggle show/hide additional models button text and state"
 }
