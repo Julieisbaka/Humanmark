@@ -9,7 +9,7 @@
         "test:python": "c:/Users/caspe/Desktop/Humanmark/.venv-1/Scripts/python.exe scripts/run_python_tests.py"
     },
     "devDependencies": {
-        "eslint": "^10.8.0",
+        "eslint": "^10.9.1",
         "jsdom": "^30.0.1"
     }
 }
