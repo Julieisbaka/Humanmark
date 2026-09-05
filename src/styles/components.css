@@ -124,6 +124,23 @@
 	-webkit-line-clamp: 2;
 }
 
+.touch-tooltip {
+	display: none;
+	position: absolute;
+	z-index: 1000;
+	max-width: min(360px, calc(100vw - 16px));
+	padding: 8px 12px;
+	background: var(--panel);
+	color: var(--text);
+	border: 1px solid var(--border);
+	border-radius: 8px;
+	box-shadow: var(--shadow);
+	font-size: 0.875rem;
+	line-height: 1.4;
+	word-break: break-word;
+	pointer-events: none;
+}
+
 .question-media,
 .review-media {
 	display: grid;
