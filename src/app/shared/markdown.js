@@ -309,6 +309,13 @@ export function renderMarkdown(value) {
 			const lines = protectedText.split('\n').map((line) => line.trimEnd());
 			const isUnorderedList = lines.every((line) => /^[-*]\s+/.test(line));
 			const isOrderedList = lines.every((line) => /^\d+\.\s+/.test(line));
+			const heading = lines.length === 1 && lines[0].match(/^(#{1,6})\s+(.+)$/);
+
+			if (heading) {
+				const level = heading[1].length;
+				const markup = `<h${level}>${renderInlineMarkdownCore(heading[2])}</h${level}>`;
+				return restoreMathSegments(markup, tokens);
+			}
 
 			if (isUnorderedList) {
 				const markup = `<ul>${lines

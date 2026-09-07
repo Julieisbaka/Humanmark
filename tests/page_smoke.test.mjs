@@ -39,6 +39,35 @@ function delay(ms) {
 	});
 }
 
+test('home page renders changelog Markdown', () => {
+	const dom = setupDom(`
+		<form data-role="benchmark-form">
+			<select data-role="benchmark-select"></select>
+			<input data-role="question-count" type="number" />
+		</form>
+		<div data-role="benchmark-preview"></div>
+		<div data-role="scoreboard"></div>
+		<div data-role="changelog"></div>
+	`);
+
+	renderHome({
+		benchmarkIndex: [],
+		benchmarksData: {},
+		currentScores: { benchmarks: {} },
+		changelog: {
+			generatedAt: '2026-08-01T00:00:00.000Z',
+			summary: '### Improvements\n\n- Added **Markdown** rendering.',
+		},
+	});
+
+	const changelog = document.querySelector('[data-role="changelog"]');
+	assert.ok(changelog?.querySelector('h3'));
+	assert.equal(changelog?.querySelector('strong')?.textContent, 'Markdown');
+	assert.equal(changelog?.querySelectorAll('li').length, 1);
+
+	dom.window.close();
+});
+
 test('home page selection ignores stale async benchmark detail responses', async () => {
 	const dom = setupDom(`
 		<form data-role="benchmark-form">

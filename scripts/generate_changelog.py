@@ -39,7 +39,8 @@ SYSTEM_PROMPT = (
     "If there is nothing meaningful to report (e.g. only automated commits), "
     "return a single paragraph stating that no significant changes were made "
     "this week. Do NOT include headers like 'Changelog' — just the grouped "
-    "bullet points."
+    "bullet points. Use only the supported Markdown features: headings, bullet "
+    "or numbered lists, paragraphs, bold, italic, inline code, and links."
 )
 
 

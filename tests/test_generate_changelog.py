@@ -121,6 +121,10 @@ class GenerateChangelogTests(unittest.TestCase):
         self.assertEqual("gpt-4o", captured["payload"]["model"])
         self.assertEqual("system", captured["payload"]["messages"][0]["role"])
         self.assertIn(
+            "Use only the supported Markdown features",
+            captured["payload"]["messages"][0]["content"],
+        )
+        self.assertIn(
             "- feat: add changelog",
             captured["payload"]["messages"][1]["content"],
         )
