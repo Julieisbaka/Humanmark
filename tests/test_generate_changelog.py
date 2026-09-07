@@ -274,6 +274,7 @@ class GenerateChangelogTests(unittest.TestCase):
                 return_value=["pages updated for cafebabe"],
             ), patch(
                 "scripts.generate_changelog._call_copilot",
+                return_value="This summary must not be used.",
             ) as mock_call_copilot, patch(
                 "scripts.generate_changelog._get_head_sha",
                 return_value="abc123",
