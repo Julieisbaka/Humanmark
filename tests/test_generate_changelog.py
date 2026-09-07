@@ -266,9 +266,37 @@ class GenerateChangelogTests(unittest.TestCase):
                 "token",
             )
 
+    def test_generate_changelog_skips_copilot_when_only_marker_commit_exists(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = pathlib.Path(temp_dir) / "changelog.json"
+            with patch(
+                "scripts.generate_changelog._get_commits_since_days",
+                return_value=["pages updated for cafebabe"],
+            ), patch(
+                "scripts.generate_changelog._call_copilot",
+            ) as mock_call_copilot, patch(
+                "scripts.generate_changelog._get_head_sha",
+                return_value="abc123",
+            ):
+                generate_changelog(
+                    output_path=output_path,
+                    since_sha=None,
+                    token="token",
+                    days=7,
+                )
+
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(0, payload["commitCount"])
+            self.assertEqual(
+                "No significant changes were made this week.",
+                payload["summary"],
+            )
+            mock_call_copilot.assert_not_called()
+
     def test_is_bot_commit_detects_skip_ci(self):
         self.assertTrue(_is_bot_commit("chore: update AI changelog [skip ci]"))
         self.assertTrue(_is_bot_commit("chore: refresh scores [skip ci]"))
+        self.assertTrue(_is_bot_commit("pages updated for cafebabe"))
         self.assertFalse(_is_bot_commit("feat: add new feature"))
         self.assertFalse(_is_bot_commit("fix: patch bug"))
 

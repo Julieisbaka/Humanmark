@@ -45,7 +45,7 @@ SYSTEM_PROMPT = (
 
 
 def _is_bot_commit(subject: str) -> bool:
-    return "[skip ci]" in subject
+    return "[skip ci]" in subject or subject.startswith("pages updated for ")
 
 
 def _get_commits_since_sha(since_sha: str) -> list[str]:
