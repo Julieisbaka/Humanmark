@@ -147,10 +147,13 @@ def generate_changelog(
 
     commits = [c for c in commits if not _is_bot_commit(c)]
 
-    try:
-        summary = _call_copilot(commits, token)
-    except (HTTPError, URLError):
+    if not commits:
         summary = _build_fallback_summary(commits)
+    else:
+        try:
+            summary = _call_copilot(commits, token)
+        except (HTTPError, URLError):
+            summary = _build_fallback_summary(commits)
     head_sha = _get_head_sha()
 
     changelog = {
