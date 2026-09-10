@@ -300,6 +300,61 @@ test('questions page drops persisted answers for crossed-out choices', async () 
 	dom.window.close();
 });
 
+test('questions page updates note toggles and renders AIME note for standardized-answer mode', async () => {
+	const dom = setupDom(`
+		<div data-role="questions-status"></div>
+		<div data-role="questions-shell"></div>
+	`);
+
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async (input) => {
+		const url = String(input);
+		if (url.includes('/bench-aime.json')) {
+			return new Response(JSON.stringify({
+				scoring: { mode: 'standardized-answer' },
+				questions: [
+					{ id: 'q1', prompt: 'P1', choices: [], answer: '42' },
+				],
+			}), { status: 200, headers: { 'content-type': 'application/json' } });
+		}
+		throw new Error(`Unexpected fetch URL: ${url}`);
+	};
+
+	localStorage.setItem(SETTINGS_KEY, JSON.stringify({ questionsPerPage: 1, leaderboardLimit: 50, sortNumericChoices: true }));
+	localStorage.setItem(STATE_KEY, JSON.stringify({
+		benchmarkId: 'bench-aime',
+		questionIds: ['q1'],
+		answers: {},
+		currentQuestionPage: 1,
+	}));
+
+	await renderQuestions({
+		dataRoot: 'data',
+		currentScores: { benchmarks: {} },
+		benchmarkIndex: [{
+			id: 'bench-aime',
+			file: 'bench-aime.json',
+			name: 'AIME Bench',
+			description: 'desc',
+			options: 0,
+			source: { dataset: 'ds-aime' },
+		}],
+	});
+
+	const aimeNote = document.querySelector('.aime-scoring-note');
+	assert.ok(aimeNote);
+
+	const toggleLabel = aimeNote.querySelector('.question-note-toggle');
+	assert.equal(toggleLabel?.textContent, 'Show note');
+
+	aimeNote.open = true;
+	aimeNote.dispatchEvent(new window.Event('toggle', { bubbles: true }));
+	assert.equal(toggleLabel?.textContent, 'Hide note');
+
+	globalThis.fetch = originalFetch;
+	dom.window.close();
+});
+
 test('results page respects leaderboard truncation setting and show-more expansion', async () => {
 	const dom = setupDom(`
 		<div data-role="results-meta"></div>
