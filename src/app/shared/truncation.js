@@ -2,6 +2,8 @@ function isTruncated(element) {
 	return (element.scrollHeight - element.clientHeight) > 1 || (element.scrollWidth - element.clientWidth) > 1;
 }
 
+let expanderIdCounter = 0;
+
 function getButtonAnchor(element) {
 	const parent = element.parentElement;
 	if (!parent) {
@@ -20,9 +22,11 @@ export function initTruncationExpanders(root = document) {
 		}
 
 		if (!isTruncated(element)) {
-			element.dataset.expandReady = 'true';
 			return;
 		}
+
+		const contentId = element.id || `content-truncate-${expanderIdCounter += 1}`;
+		element.id = contentId;
 
 		const button = document.createElement('button');
 		button.type = 'button';
@@ -30,6 +34,7 @@ export function initTruncationExpanders(root = document) {
 		button.dataset.role = 'content-expand-toggle';
 		button.textContent = 'Expand';
 		button.setAttribute('aria-expanded', 'false');
+		button.setAttribute('aria-controls', contentId);
 
 		button.addEventListener('click', () => {
 			const expanded = element.classList.toggle('content-truncate--expanded');
