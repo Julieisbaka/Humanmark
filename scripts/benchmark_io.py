@@ -30,7 +30,7 @@ def load(dataset: str, task: str | None = None, split: str | None = None):
 
 
 def _output_path_arg(value: str) -> Path:
-    base_path = Path.cwd().resolve()
+    base_path = Path.cwd().resolve(strict=False)
     output_path = Path(value).expanduser()
     if not output_path.is_absolute():
         output_path = base_path / output_path

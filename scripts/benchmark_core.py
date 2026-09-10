@@ -765,7 +765,7 @@ def parse(
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    base_path = Path.cwd().resolve()
+    base_path = Path.cwd().resolve(strict=False)
     output_path = Path(output).expanduser()
     if not output_path.is_absolute():
         output_path = base_path / output_path
