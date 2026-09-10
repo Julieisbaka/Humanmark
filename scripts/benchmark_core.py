@@ -765,8 +765,8 @@ def parse(
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    base_path = os.path.normpath(os.getcwd())
-    candidate = os.path.normpath(
+    base_path = os.path.realpath(os.getcwd())
+    candidate = os.path.realpath(
         os.path.join(base_path, os.path.expanduser(os.fspath(output)))
     )
 
