@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from scripts.generate_changelog import (
     COPILOT_API_URL,
     DEFAULT_COPILOT_INTEGRATION_ID,
+    NO_AI_SUMMARY,
     _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
@@ -66,7 +67,7 @@ class GenerateChangelogTests(unittest.TestCase):
         with patch("scripts.generate_changelog.urlopen") as mock_urlopen:
             summary = _call_copilot([], "token")
 
-        self.assertEqual("No significant changes were made this week.", summary)
+        self.assertEqual(NO_AI_SUMMARY, summary)
         mock_urlopen.assert_not_called()
 
     def test_build_fallback_summary_formats_recent_commits(self):
@@ -288,10 +289,7 @@ class GenerateChangelogTests(unittest.TestCase):
 
             payload = json.loads(output_path.read_text(encoding="utf-8"))
             self.assertEqual(0, payload["commitCount"])
-            self.assertEqual(
-                "No significant changes were made this week.",
-                payload["summary"],
-            )
+            self.assertEqual(NO_AI_SUMMARY, payload["summary"])
             mock_call_copilot.assert_not_called()
 
     def test_is_bot_commit_detects_skip_ci(self):

@@ -28,6 +28,7 @@ from urllib.error import HTTPError, URLError
 COPILOT_API_URL = "https://api.githubcopilot.com/chat/completions"
 MODEL_NAME = "gpt-4o"
 DEFAULT_COPILOT_INTEGRATION_ID = "copilot-developer-cli"
+NO_AI_SUMMARY = "Refreshed data for the changelog."
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant that writes concise, human-readable release "
@@ -96,7 +97,7 @@ def _build_fallback_summary(commit_messages: list[str]) -> str:
 
 def _call_copilot(commit_messages: list[str], token: str) -> str:
     if not commit_messages:
-        return "No significant changes were made this week."
+        return NO_AI_SUMMARY
 
     user_content = "Recent commits:\n" + "\n".join(f"- {msg}" for msg in commit_messages)
 
@@ -148,7 +149,7 @@ def generate_changelog(
     commits = [c for c in commits if not _is_bot_commit(c)]
 
     if not commits:
-        summary = _build_fallback_summary(commits)
+        summary = NO_AI_SUMMARY
     else:
         try:
             summary = _call_copilot(commits, token)
