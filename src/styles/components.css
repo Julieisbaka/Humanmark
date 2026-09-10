@@ -124,6 +124,28 @@
 	-webkit-line-clamp: 2;
 }
 
+.content-truncate--expanded {
+	display: block;
+	-webkit-line-clamp: unset;
+	overflow: visible;
+}
+
+.content-expand-button {
+	margin-top: 6px;
+	padding: 0;
+	border: 0;
+	background: transparent;
+	color: var(--accent-2);
+	font-weight: 700;
+	font-size: 0.84rem;
+	cursor: pointer;
+	text-align: left;
+}
+
+.content-expand-button:hover {
+	color: var(--accent);
+}
+
 .touch-tooltip {
 	display: none;
 	position: absolute;
