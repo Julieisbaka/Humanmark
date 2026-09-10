@@ -241,6 +241,65 @@ test('questions page paginates and transitions from Next to Score button', async
 	dom.window.close();
 });
 
+test('questions page updates note toggle labels and renders AIME note for standardized-answer mode', async () => {
+	const dom = setupDom(`
+		<div data-role="questions-status"></div>
+		<div data-role="questions-shell"></div>
+	`);
+
+	const originalFetch = globalThis.fetch;
+	globalThis.fetch = async (input) => {
+		const url = String(input);
+		if (url.includes('/bench-standardized.json')) {
+			return new Response(JSON.stringify({
+				scoring: { mode: 'standardized-answer' },
+				questions: [
+					{ id: 'q1', prompt: 'P1', choices: [] },
+				],
+			}), { status: 200, headers: { 'content-type': 'application/json' } });
+		}
+		throw new Error(`Unexpected fetch URL: ${url}`);
+	};
+
+	localStorage.setItem(SETTINGS_KEY, JSON.stringify({ questionsPerPage: 1, leaderboardLimit: 50, sortNumericChoices: true }));
+	localStorage.setItem(STATE_KEY, JSON.stringify({
+		benchmarkId: 'bench-standardized',
+		questionIds: ['q1'],
+		answers: {},
+		currentQuestionPage: 1,
+	}));
+
+	await renderQuestions({
+		dataRoot: 'data',
+		currentScores: { benchmarks: {} },
+		benchmarkIndex: [{
+			id: 'bench-standardized',
+			file: 'bench-standardized.json',
+			name: 'Standardized Bench',
+			description: 'desc',
+			options: 0,
+			source: { dataset: 'ds-standardized' },
+		}],
+	});
+
+	assert.ok(document.querySelector('.aime-scoring-note'));
+	const toolPolicyNote = document.querySelector('.tool-policy-note');
+	assert.ok(toolPolicyNote);
+	const toolPolicyToggle = toolPolicyNote.querySelector('.question-note-toggle');
+	assert.equal(toolPolicyToggle?.textContent, 'Show note');
+
+	toolPolicyNote.open = true;
+	toolPolicyNote.dispatchEvent(new window.Event('toggle', { bubbles: true }));
+	assert.equal(toolPolicyToggle?.textContent, 'Hide note');
+
+	toolPolicyNote.open = false;
+	toolPolicyNote.dispatchEvent(new window.Event('toggle', { bubbles: true }));
+	assert.equal(toolPolicyToggle?.textContent, 'Show note');
+
+	globalThis.fetch = originalFetch;
+	dom.window.close();
+});
+
 test('questions page drops persisted answers for crossed-out choices', async () => {
 	const dom = setupDom(`
 		<div data-role="questions-status"></div>
