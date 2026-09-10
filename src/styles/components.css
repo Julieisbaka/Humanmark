@@ -72,10 +72,9 @@
 	display: none;
 }
 
-.question-note summary:focus-visible {
+.question-note:focus-within {
 	outline: 2px solid var(--accent-2);
 	outline-offset: 4px;
-	border-radius: 8px;
 }
 
 .question-note-toggle {
