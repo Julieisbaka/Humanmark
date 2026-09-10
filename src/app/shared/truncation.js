@@ -28,7 +28,8 @@ export function initTruncationExpanders(root = document) {
 		const contentId = element.id || `content-truncate-${expanderIdCounter += 1}`;
 		element.id = contentId;
 
-		const button = document.createElement('button');
+		const ownerDocument = element.ownerDocument || document;
+		const button = ownerDocument.createElement('button');
 		button.type = 'button';
 		button.className = 'content-expand-button';
 		button.dataset.role = 'content-expand-toggle';
