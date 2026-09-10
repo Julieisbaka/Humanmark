@@ -28,7 +28,7 @@ from urllib.error import HTTPError, URLError
 COPILOT_API_URL = "https://api.githubcopilot.com/chat/completions"
 MODEL_NAME = "gpt-4o"
 DEFAULT_COPILOT_INTEGRATION_ID = "copilot-developer-cli"
-NO_AI_SUMMARY = "Refreshed data for the changelog."
+NO_AI_SUMMARY = "Refreshed data from sources."
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant that writes concise, human-readable release "
