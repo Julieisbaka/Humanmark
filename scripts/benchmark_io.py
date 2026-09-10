@@ -29,6 +29,30 @@ def load(dataset: str, task: str | None = None, split: str | None = None):
     return load_dataset(dataset, token=token)
 
 
+def _output_path_arg(value: str) -> Path:
+    base_path = Path.cwd().resolve(strict=False)
+    output_path = Path(value).expanduser()
+    if not output_path.is_absolute():
+        output_path = base_path / output_path
+
+    output_path = output_path.resolve(strict=False)
+    normalized_base = os.path.normcase(str(base_path))
+    normalized_output = os.path.normcase(str(output_path))
+    try:
+        within_base = (
+            os.path.commonpath((normalized_base, normalized_output)) == normalized_base
+        )
+    except ValueError:
+        within_base = False
+
+    if not within_base:
+        raise argparse.ArgumentTypeError(
+            "Output path must be within the current working directory."
+        )
+
+    return output_path
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Load a Hugging Face benchmark and save a compact question set."
@@ -38,7 +62,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--split", default=None, help="Optional dataset split to load")
     parser.add_argument(
         "--output",
-        type=Path,
+        type=_output_path_arg,
         required=True,
         help="Output JSON file path for the compact parsed benchmark",
     )

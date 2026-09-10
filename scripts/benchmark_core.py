@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -764,10 +765,15 @@ def parse(
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
+    base_path = os.path.realpath(os.getcwd())
+    candidate = os.path.realpath(
+        os.path.join(base_path, os.path.expanduser(os.fspath(output)))
     )
-    return output_path
+
+    if not candidate.startswith(base_path + os.sep):
+        raise ValueError("Output path must be within the current working directory.")
+
+    os.makedirs(os.path.dirname(candidate), exist_ok=True)
+    with open(candidate, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    return Path(candidate)
