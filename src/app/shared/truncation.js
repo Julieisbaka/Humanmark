@@ -3,6 +3,8 @@ function isTruncated(element) {
 }
 
 let expanderIdCounter = 0;
+const expanderButtons = new WeakMap();
+const resizeObservers = new WeakMap();
 
 function getButtonAnchor(element) {
 	const parent = element.parentElement;
@@ -26,12 +28,73 @@ function getContentTypeLabel(element) {
 }
 
 export function initTruncationExpanders(root = document) {
+	const getResizeObserver = (ownerDocument) => {
+		if (!ownerDocument || ownerDocument.nodeType !== 9 || typeof window.ResizeObserver !== 'function') {
+			return null;
+		}
+
+		let observer = resizeObservers.get(ownerDocument);
+		if (!observer) {
+			observer = new window.ResizeObserver((entries) => {
+				entries.forEach(({ target }) => {
+					if (!(target instanceof HTMLElement)) {
+						return;
+					}
+					const button = expanderButtons.get(target);
+					if (!isTruncated(target)) {
+						if (button) {
+							button.remove();
+							expanderButtons.delete(target);
+							target.classList.remove('content-truncate--expanded');
+							delete target.dataset.expandReady;
+						}
+						return;
+					}
+
+					if (!button) {
+						const contentId = target.id || `content-truncate-${expanderIdCounter += 1}`;
+						target.id = contentId;
+
+						const newButton = ownerDocument.createElement('button');
+						const contentType = getContentTypeLabel(target);
+						newButton.type = 'button';
+						newButton.className = 'content-expand-button';
+						newButton.dataset.role = 'content-expand-toggle';
+						newButton.textContent = 'Expand';
+						newButton.setAttribute('aria-expanded', 'false');
+						newButton.setAttribute('aria-controls', contentId);
+						newButton.setAttribute('aria-label', `Expand full ${contentType}`);
+
+						newButton.addEventListener('click', () => {
+							const expanded = target.classList.toggle('content-truncate--expanded');
+							newButton.textContent = expanded ? 'Collapse' : 'Expand';
+							newButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+							newButton.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} full ${contentType}`);
+						});
+
+						getButtonAnchor(target).insertAdjacentElement('afterend', newButton);
+						expanderButtons.set(target, newButton);
+						target.dataset.expandReady = 'true';
+					}
+				});
+			});
+			resizeObservers.set(ownerDocument, observer);
+		}
+		return observer;
+	};
+
 	const initialize = () => {
 		const elements = root.querySelectorAll('.content-truncate');
 
 		elements.forEach((element) => {
 			if (!(element instanceof HTMLElement) || element.dataset.expandReady === 'true') {
 				return;
+			}
+
+			const observer = getResizeObserver(element.ownerDocument || document);
+			if (observer && element.dataset.expandObserved !== 'true') {
+				observer.observe(element);
+				element.dataset.expandObserved = 'true';
 			}
 
 			if (!isTruncated(element)) {
@@ -60,6 +123,7 @@ export function initTruncationExpanders(root = document) {
 			});
 
 			getButtonAnchor(element).insertAdjacentElement('afterend', button);
+			expanderButtons.set(element, button);
 			element.dataset.expandReady = 'true';
 		});
 	};

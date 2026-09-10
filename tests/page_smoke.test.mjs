@@ -459,3 +459,39 @@ test('truncation expander initialization detects delayed truncation and stays id
 	window.requestAnimationFrame = originalRequestAnimationFrame;
 	dom.window.close();
 });
+
+test('truncation expanders reconcile when resize changes truncation state', () => {
+	const dom = setupDom('<div class="content-truncate" data-role="truncated">Long content</div>');
+	const truncated = document.querySelector('[data-role="truncated"]');
+	assert.ok(truncated);
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+
+	let resizeCallback = null;
+	const originalResizeObserver = window.ResizeObserver;
+	window.ResizeObserver = class {
+		constructor(callback) {
+			resizeCallback = callback;
+		}
+		observe() {}
+	};
+
+	initTruncationExpanders(document);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+	assert.ok(resizeCallback);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	resizeCallback([{ target: truncated }]);
+	const button = document.querySelector('[data-role="content-expand-toggle"]');
+	assert.ok(button);
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+	resizeCallback([{ target: truncated }]);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), false);
+
+	window.ResizeObserver = originalResizeObserver;
+	dom.window.close();
+});
