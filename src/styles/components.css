@@ -72,6 +72,12 @@
 	display: none;
 }
 
+.question-note summary:focus-visible {
+	outline: 2px solid var(--accent-2);
+	outline-offset: 4px;
+	border-radius: 8px;
+}
+
 .question-note-toggle {
 	color: var(--accent-2);
 	font-size: 0.86rem;
