@@ -59,6 +59,50 @@
 	border-style: dashed;
 }
 
+.question-note summary {
+	display: block;
+	cursor: pointer;
+	list-style: none;
+}
+
+.question-note summary::-webkit-details-marker {
+	display: none;
+}
+
+.question-note summary:focus-visible {
+	outline: 2px solid var(--accent-2);
+	outline-offset: 4px;
+	border-radius: 8px;
+}
+
+.question-note-summary-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+}
+
+.question-note-toggle {
+	color: var(--accent-2);
+	font-size: 0.86rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.question-note-toggle::before {
+	content: '▸';
+	display: inline-block;
+	margin-right: 6px;
+}
+
+.question-note[open] .question-note-toggle::before {
+	content: '▾';
+}
+
+.question-note p {
+	margin-top: 12px;
+}
+
 .aime-scoring-note {
 	border-style: solid;
 	border-color: rgba(138, 180, 248, 0.2);
