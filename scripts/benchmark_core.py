@@ -765,17 +765,19 @@ def parse(
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    base_path = os.path.normcase(os.path.realpath(os.getcwd()))
-    candidate = os.path.normcase(
-        os.path.realpath(
-            os.path.join(base_path, os.path.expanduser(os.fspath(output)))
-        )
-    )
+    base_path = Path.cwd().resolve(strict=False)
+    output_path = Path(output).expanduser()
+    if not output_path.is_absolute():
+        output_path = base_path / output_path
 
-    if candidate != base_path and not candidate.startswith(base_path + os.sep):
-        raise ValueError("Output path must be within the current working directory.")
+    safe_path = output_path.resolve(strict=False)
+    try:
+        safe_path.relative_to(base_path)
+    except ValueError as exc:
+        raise ValueError(
+            "Output path must be within the current working directory."
+        ) from exc
 
-    safe_path = Path(candidate)
     safe_path.parent.mkdir(parents=True, exist_ok=True)
     safe_path.write_text(
         json.dumps(data, ensure_ascii=False, indent=2) + "\n",
