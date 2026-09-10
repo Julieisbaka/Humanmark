@@ -433,11 +433,11 @@ test('truncation expanders only attach for truncated content and toggle state on
 	dom.window.close();
 });
 
-test('truncation expander initialization stays idempotent across repeated calls and animation frame reruns', () => {
+test('truncation expander initialization detects delayed truncation and stays idempotent', () => {
 	const dom = setupDom('<div class="content-truncate" data-role="truncated">Long content</div>');
 	const truncated = document.querySelector('[data-role="truncated"]');
 	assert.ok(truncated);
-	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
 
 	const queuedFrames = [];
 	const originalRequestAnimationFrame = window.requestAnimationFrame;
@@ -448,6 +448,9 @@ test('truncation expander initialization stays idempotent across repeated calls 
 
 	initTruncationExpanders(document);
 	initTruncationExpanders(document);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
 	queuedFrames.forEach((callback) => callback());
 
 	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 1);
