@@ -125,7 +125,7 @@
 }
 
 .content-truncate--expanded {
-	display: block;
+	display: revert;
 	-webkit-box-orient: initial;
 	-webkit-line-clamp: unset;
 	overflow: visible;
