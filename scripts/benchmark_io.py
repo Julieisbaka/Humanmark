@@ -36,12 +36,10 @@ def _output_path_arg(value: str) -> Path:
         output_path = base_path / output_path
 
     output_path = output_path.resolve(strict=False)
-    try:
-        output_path.relative_to(base_path)
-    except ValueError as error:
+    if os.path.commonpath((str(base_path), str(output_path))) != str(base_path):
         raise argparse.ArgumentTypeError(
             "Output path must be within the current working directory."
-        ) from error
+        )
 
     return output_path
 

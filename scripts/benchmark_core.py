@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -770,10 +771,8 @@ def save(data: list[dict[str, Any]], output: str | Path) -> Path:
         output_path = base_path / output_path
 
     output_path = output_path.resolve(strict=False)
-    try:
-        output_path.relative_to(base_path)
-    except ValueError as error:
-        raise ValueError("Output path must be within the current working directory.") from error
+    if os.path.commonpath((str(base_path), str(output_path))) != str(base_path):
+        raise ValueError("Output path must be within the current working directory.")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(
