@@ -28,6 +28,7 @@ from urllib.error import HTTPError, URLError
 COPILOT_API_URL = "https://api.githubcopilot.com/chat/completions"
 MODEL_NAME = "gpt-4o"
 DEFAULT_COPILOT_INTEGRATION_ID = "copilot-developer-cli"
+NO_AI_SUMMARY = "Refreshed data from sources."
 
 SYSTEM_PROMPT = (
     "You are a helpful assistant that writes concise, human-readable release "
@@ -45,7 +46,7 @@ SYSTEM_PROMPT = (
 
 
 def _is_bot_commit(subject: str) -> bool:
-    return "[skip ci]" in subject
+    return "[skip ci]" in subject or subject.startswith("pages updated for ")
 
 
 def _get_commits_since_sha(since_sha: str) -> list[str]:
@@ -96,7 +97,7 @@ def _build_fallback_summary(commit_messages: list[str]) -> str:
 
 def _call_copilot(commit_messages: list[str], token: str) -> str:
     if not commit_messages:
-        return "No significant changes were made this week."
+        return NO_AI_SUMMARY
 
     user_content = "Recent commits:\n" + "\n".join(f"- {msg}" for msg in commit_messages)
 
@@ -147,10 +148,13 @@ def generate_changelog(
 
     commits = [c for c in commits if not _is_bot_commit(c)]
 
-    try:
-        summary = _call_copilot(commits, token)
-    except (HTTPError, URLError):
-        summary = _build_fallback_summary(commits)
+    if not commits:
+        summary = NO_AI_SUMMARY
+    else:
+        try:
+            summary = _call_copilot(commits, token)
+        except (HTTPError, URLError):
+            summary = _build_fallback_summary(commits)
     head_sha = _get_head_sha()
 
     changelog = {
