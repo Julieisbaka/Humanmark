@@ -59,6 +59,30 @@
 	border-style: dashed;
 }
 
+.question-note summary {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	cursor: pointer;
+	list-style: none;
+}
+
+.question-note summary::-webkit-details-marker {
+	display: none;
+}
+
+.question-note-toggle {
+	color: var(--accent-2);
+	font-size: 0.86rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+
+.question-note p {
+	margin-top: 12px;
+}
+
 .aime-scoring-note {
 	border-style: solid;
 	border-color: rgba(138, 180, 248, 0.2);
