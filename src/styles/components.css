@@ -79,6 +79,16 @@
 	white-space: nowrap;
 }
 
+.question-note-toggle::before {
+	content: '▸';
+	display: inline-block;
+	margin-right: 6px;
+}
+
+.question-note[open] .question-note-toggle::before {
+	content: '▾';
+}
+
 .question-note p {
 	margin-top: 12px;
 }
