@@ -164,16 +164,20 @@ export async function renderQuestions(appData) {
 		container.innerHTML = `
 			<details class="panel panel--soft tool-policy-note question-note">
 				<summary>
-					<span class="eyebrow">Tool policy</span>
-					<span class="question-note-toggle">Show note</span>
+					<span class="question-note-summary-row">
+						<span class="eyebrow">Tool policy</span>
+						<span class="question-note-toggle">Show note</span>
+					</span>
 				</summary>
 				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
 			</details>
 			${standardizedAnswerMode ? `
 				<details class="panel panel--soft aime-scoring-note question-note">
 					<summary>
-						<span class="eyebrow">AIME scoring</span>
-						<span class="question-note-toggle">Show note</span>
+						<span class="question-note-summary-row">
+							<span class="eyebrow">AIME scoring</span>
+							<span class="question-note-toggle">Show note</span>
+						</span>
 					</summary>
 					<p>
 						Answers on AIME are scored with logic-based normalization instead of multiple choice.

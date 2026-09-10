@@ -60,10 +60,7 @@
 }
 
 .question-note summary {
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 12px;
+	display: block;
 	cursor: pointer;
 	list-style: none;
 }
@@ -72,9 +69,17 @@
 	display: none;
 }
 
-.question-note:focus-within {
+.question-note summary:focus-visible {
 	outline: 2px solid var(--accent-2);
 	outline-offset: 4px;
+	border-radius: 8px;
+}
+
+.question-note-summary-row {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
 }
 
 .question-note-toggle {
