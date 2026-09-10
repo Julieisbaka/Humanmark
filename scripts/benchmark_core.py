@@ -771,7 +771,9 @@ def save(data: list[dict[str, Any]], output: str | Path) -> Path:
         output_path = base_path / output_path
 
     output_path = output_path.resolve(strict=False)
-    if os.path.commonpath((str(base_path), str(output_path))) != str(base_path):
+    normalized_base = os.path.normcase(str(base_path))
+    normalized_output = os.path.normcase(str(output_path))
+    if os.path.commonpath((normalized_base, normalized_output)) != normalized_base:
         raise ValueError("Output path must be within the current working directory.")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)

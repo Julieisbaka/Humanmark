@@ -36,7 +36,9 @@ def _output_path_arg(value: str) -> Path:
         output_path = base_path / output_path
 
     output_path = output_path.resolve(strict=False)
-    if os.path.commonpath((str(base_path), str(output_path))) != str(base_path):
+    normalized_base = os.path.normcase(str(base_path))
+    normalized_output = os.path.normcase(str(output_path))
+    if os.path.commonpath((normalized_base, normalized_output)) != normalized_base:
         raise argparse.ArgumentTypeError(
             "Output path must be within the current working directory."
         )
