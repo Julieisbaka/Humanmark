@@ -13,6 +13,18 @@ function getButtonAnchor(element) {
 	return parent.tagName === 'LABEL' ? parent : element;
 }
 
+function getContentTypeLabel(element) {
+	if (element.classList.contains('question-prompt') || element.classList.contains('review-prompt')) {
+		return 'question';
+	}
+
+	if (element.classList.contains('choice-text') || element.classList.contains('review-answer-text')) {
+		return 'answer';
+	}
+
+	return 'content';
+}
+
 export function initTruncationExpanders(root = document) {
 	const elements = root.querySelectorAll('.content-truncate');
 
@@ -30,17 +42,20 @@ export function initTruncationExpanders(root = document) {
 
 		const ownerDocument = element.ownerDocument || document;
 		const button = ownerDocument.createElement('button');
+		const contentType = getContentTypeLabel(element);
 		button.type = 'button';
 		button.className = 'content-expand-button';
 		button.dataset.role = 'content-expand-toggle';
 		button.textContent = 'Expand';
 		button.setAttribute('aria-expanded', 'false');
 		button.setAttribute('aria-controls', contentId);
+		button.setAttribute('aria-label', `Expand full ${contentType}`);
 
 		button.addEventListener('click', () => {
 			const expanded = element.classList.toggle('content-truncate--expanded');
 			button.textContent = expanded ? 'Collapse' : 'Expand';
 			button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+			button.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} full ${contentType}`);
 		});
 
 		getButtonAnchor(element).insertAdjacentElement('afterend', button);
