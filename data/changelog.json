@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-09-14T06:45:11.352980+00:00",
+  "generatedAt": "2026-09-14T18:03:45.566915+00:00",
   "generatedBy": "copilot",
-  "headSha": "4b179c8971e4ad2457fcd7f29565af77da6a9881",
-  "commitCount": 6,
-  "summary": "### Recent updates\n- Add bot commit step for refreshed Pages data\n- Update NO_AI_SUMMARY text in generate_changelog.py\n- Use fixed summary when AI is skipped\n- Avoid changelog summarization without changes\n- Fix changelog skip regression test\n- Skip AI changelog summaries without changes"
+  "headSha": "559b8d1dedf2db4d454697b06b86a3bcda9cbfeb",
+  "commitCount": 0,
+  "summary": "Refreshed data from sources."
 }
