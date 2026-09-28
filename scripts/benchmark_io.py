@@ -7,9 +7,9 @@ from pathlib import Path
 from datasets import load_dataset
 
 try:
-    from scripts.benchmark_core import parse, save
+    from scripts.benchmark_core import parse, resolve_output_path, save
 except ModuleNotFoundError:
-    from benchmark_core import parse, save
+    from benchmark_core import parse, resolve_output_path, save
 
 
 def load(dataset: str, task: str | None = None, split: str | None = None):
@@ -30,27 +30,10 @@ def load(dataset: str, task: str | None = None, split: str | None = None):
 
 
 def _output_path_arg(value: str) -> Path:
-    base_path = Path.cwd().resolve(strict=False)
-    output_path = Path(value).expanduser()
-    if not output_path.is_absolute():
-        output_path = base_path / output_path
-
-    output_path = output_path.resolve(strict=False)
-    normalized_base = os.path.normcase(str(base_path))
-    normalized_output = os.path.normcase(str(output_path))
     try:
-        within_base = (
-            os.path.commonpath((normalized_base, normalized_output)) == normalized_base
-        )
-    except ValueError:
-        within_base = False
-
-    if not within_base:
-        raise argparse.ArgumentTypeError(
-            "Output path must be within the current working directory."
-        )
-
-    return output_path
+        return resolve_output_path(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def parse_args() -> argparse.Namespace:
