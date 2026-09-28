@@ -486,9 +486,15 @@ test('truncation expanders reconcile when resize changes truncation state', () =
 
 	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+	assert.equal(button.textContent, 'Collapse');
 
 	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
 	resizeCallback([{ target: truncated }]);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 1);
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+	assert.equal(button.textContent, 'Collapse');
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
 	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
 	assert.equal(truncated.classList.contains('content-truncate--expanded'), false);
 

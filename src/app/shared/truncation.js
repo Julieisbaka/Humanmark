@@ -6,6 +6,65 @@ let expanderIdCounter = 0;
 const expanderButtons = new WeakMap();
 const resizeObservers = new WeakMap();
 
+function updateButtonState(button, expanded, contentType) {
+	button.textContent = expanded ? 'Collapse' : 'Expand';
+	button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+	button.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} full ${contentType}`);
+}
+
+function removeExpander(element) {
+	expanderButtons.get(element)?.remove();
+	expanderButtons.delete(element);
+	element.classList.remove('content-truncate--expanded');
+	delete element.dataset.expandReady;
+}
+
+function createExpander(element, ownerDocument) {
+	const existingButton = expanderButtons.get(element);
+	if (existingButton) {
+		return existingButton;
+	}
+
+	const contentId = element.id || `content-truncate-${expanderIdCounter += 1}`;
+	element.id = contentId;
+
+	const button = ownerDocument.createElement('button');
+	const contentType = getContentTypeLabel(element);
+	button.type = 'button';
+	button.className = 'content-expand-button';
+	button.dataset.role = 'content-expand-toggle';
+	button.setAttribute('aria-controls', contentId);
+	updateButtonState(button, false, contentType);
+
+	button.addEventListener('click', () => {
+		const expanded = element.classList.toggle('content-truncate--expanded');
+		updateButtonState(button, expanded, contentType);
+		if (!expanded && !isTruncated(element)) {
+			removeExpander(element);
+		}
+	});
+
+	getButtonAnchor(element).insertAdjacentElement('afterend', button);
+	expanderButtons.set(element, button);
+	element.dataset.expandReady = 'true';
+	return button;
+}
+
+function reconcileExpander(element, ownerDocument) {
+	if (element.classList.contains('content-truncate--expanded')) {
+		return;
+	}
+
+	if (!isTruncated(element)) {
+		if (expanderButtons.has(element)) {
+			removeExpander(element);
+		}
+		return;
+	}
+
+	createExpander(element, ownerDocument);
+}
+
 function getButtonAnchor(element) {
 	const parent = element.parentElement;
 	if (!parent) {
@@ -40,42 +99,7 @@ export function initTruncationExpanders(root = document) {
 					if (!(target instanceof HTMLElement)) {
 						return;
 					}
-					const button = expanderButtons.get(target);
-					if (!isTruncated(target)) {
-						if (button) {
-							button.remove();
-							expanderButtons.delete(target);
-							target.classList.remove('content-truncate--expanded');
-							delete target.dataset.expandReady;
-						}
-						return;
-					}
-
-					if (!button) {
-						const contentId = target.id || `content-truncate-${expanderIdCounter += 1}`;
-						target.id = contentId;
-
-						const newButton = ownerDocument.createElement('button');
-						const contentType = getContentTypeLabel(target);
-						newButton.type = 'button';
-						newButton.className = 'content-expand-button';
-						newButton.dataset.role = 'content-expand-toggle';
-						newButton.textContent = 'Expand';
-						newButton.setAttribute('aria-expanded', 'false');
-						newButton.setAttribute('aria-controls', contentId);
-						newButton.setAttribute('aria-label', `Expand full ${contentType}`);
-
-						newButton.addEventListener('click', () => {
-							const expanded = target.classList.toggle('content-truncate--expanded');
-							newButton.textContent = expanded ? 'Collapse' : 'Expand';
-							newButton.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-							newButton.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} full ${contentType}`);
-						});
-
-						getButtonAnchor(target).insertAdjacentElement('afterend', newButton);
-						expanderButtons.set(target, newButton);
-						target.dataset.expandReady = 'true';
-					}
+					reconcileExpander(target, ownerDocument);
 				});
 			});
 			resizeObservers.set(ownerDocument, observer);
@@ -101,30 +125,8 @@ export function initTruncationExpanders(root = document) {
 				return;
 			}
 
-			const contentId = element.id || `content-truncate-${expanderIdCounter += 1}`;
-			element.id = contentId;
-
 			const ownerDocument = element.ownerDocument || document;
-			const button = ownerDocument.createElement('button');
-			const contentType = getContentTypeLabel(element);
-			button.type = 'button';
-			button.className = 'content-expand-button';
-			button.dataset.role = 'content-expand-toggle';
-			button.textContent = 'Expand';
-			button.setAttribute('aria-expanded', 'false');
-			button.setAttribute('aria-controls', contentId);
-			button.setAttribute('aria-label', `Expand full ${contentType}`);
-
-			button.addEventListener('click', () => {
-				const expanded = element.classList.toggle('content-truncate--expanded');
-				button.textContent = expanded ? 'Collapse' : 'Expand';
-				button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-				button.setAttribute('aria-label', `${expanded ? 'Collapse' : 'Expand'} full ${contentType}`);
-			});
-
-			getButtonAnchor(element).insertAdjacentElement('afterend', button);
-			expanderButtons.set(element, button);
-			element.dataset.expandReady = 'true';
+			createExpander(element, ownerDocument);
 		});
 	};
 
