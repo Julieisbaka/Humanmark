@@ -172,6 +172,17 @@ class BenchmarkParserTests(unittest.TestCase):
             finally:
                 os.chdir(original_cwd)
 
+    def test_save_and_cli_reject_blank_output_paths(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "Output path must be a non-empty path within the current working directory.",
+        ):
+            save([], "   ")
+
+        with mock.patch.object(sys, "argv", ["benchmark.py", "demo/dataset", "--output", "   "]):
+            with self.assertRaises(SystemExit):
+                parse_args()
+
     def test_save_and_cli_reject_symlink_escape_output_paths(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             tmpdir_path = pathlib.Path(tmpdir)

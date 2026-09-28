@@ -766,6 +766,7 @@ def parse(
 
 def resolve_output_path(output: str | Path, base_path: str | Path | None = None) -> Path:
     base = Path(base_path or os.getcwd()).resolve(strict=False)
+    normalized_base = os.path.normcase(str(base))
     raw_output = os.fspath(output).strip()
     if not raw_output:
         raise ValueError("Output path must be a non-empty path within the current working directory.")
@@ -776,19 +777,29 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
 
     candidate = candidate.resolve(strict=False)
     try:
-        candidate.relative_to(base)
-    except ValueError as exc:
-        raise ValueError("Output path must be within the current working directory.") from exc
+        within_base = os.path.commonpath((normalized_base, os.path.normcase(str(candidate)))) == normalized_base
+    except ValueError:
+        within_base = False
 
-    if candidate == base:
+    if not within_base or candidate == base:
         raise ValueError("Output path must be within the current working directory.")
 
     return candidate
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    output_path = resolve_output_path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    with output_path.open("w", encoding="utf-8") as handle:
+    candidate = resolve_output_path(output)
+    base_path = os.path.normcase(os.path.realpath(os.getcwd()))
+    output_path = os.path.normcase(os.path.realpath(os.fspath(candidate)))
+    try:
+        within_base = os.path.commonpath((base_path, output_path)) == base_path
+    except ValueError:
+        within_base = False
+
+    if not within_base or output_path == base_path:
+        raise ValueError("Output path must be within the current working directory.")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-    return output_path
+    return Path(output_path)
