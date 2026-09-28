@@ -29,6 +29,10 @@ export {
 } from './shared/markdown.js';
 
 export {
+	initTruncationExpanders,
+} from './shared/truncation.js';
+
+export {
 	stripDuplicatedChoiceLines,
 	numberStandaloneBulletLists,
 } from './shared/questions.js';
