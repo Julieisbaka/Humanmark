@@ -788,7 +788,14 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
     candidate = resolve_output_path(output)
-    os.makedirs(os.path.dirname(candidate), exist_ok=True)
-    with open(candidate, "w", encoding="utf-8") as handle:
+    base_path = os.path.realpath(os.getcwd())
+    output_path = os.path.realpath(os.fspath(candidate))
+    normalized_base = os.path.normcase(base_path)
+    normalized_output = os.path.normcase(output_path)
+    if os.path.commonpath((normalized_base, normalized_output)) != normalized_base or normalized_output == normalized_base:
+        raise ValueError("Output path must be within the current working directory.")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as handle:
         handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
-    return Path(candidate)
+    return Path(output_path)
