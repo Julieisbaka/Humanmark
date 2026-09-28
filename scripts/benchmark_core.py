@@ -771,11 +771,15 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
     if not raw_output:
         raise ValueError("Output path must be a non-empty path within the current working directory.")
 
-    candidate = Path(raw_output).expanduser()
-    if not candidate.is_absolute():
-        candidate = base / candidate
+    raw_candidate = Path(raw_output).expanduser()
+    if raw_candidate.is_absolute():
+        raise ValueError("Output path must be a relative path within the current working directory.")
+    if any(part == ".." for part in raw_candidate.parts):
+        raise ValueError("Output path must not contain parent-directory traversal segments.")
+    if "\x00" in raw_output:
+        raise ValueError("Output path contains invalid characters.")
 
-    candidate = candidate.resolve(strict=False)
+    candidate = (base / raw_candidate).resolve(strict=False)
     try:
         within_base = os.path.commonpath((normalized_base, os.path.normcase(str(candidate)))) == normalized_base
     except ValueError:
