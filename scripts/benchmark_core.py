@@ -770,14 +770,16 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
     raw_output = os.fspath(output).strip()
     if not raw_output:
         raise ValueError("Output path must be a non-empty path within the current working directory.")
+    if "\x00" in raw_output:
+        raise ValueError("Output path contains invalid characters.")
+    if not re.fullmatch(r"[A-Za-z0-9._\-/\\ ]+", raw_output):
+        raise ValueError("Output path contains unsupported characters.")
 
     raw_candidate = Path(raw_output).expanduser()
     if raw_candidate.is_absolute():
         raise ValueError("Output path must be a relative path within the current working directory.")
-    if any(part == ".." for part in raw_candidate.parts):
-        raise ValueError("Output path must not contain parent-directory traversal segments.")
-    if "\x00" in raw_output:
-        raise ValueError("Output path contains invalid characters.")
+    if any(part in {".", ".."} for part in raw_candidate.parts):
+        raise ValueError("Output path must not contain traversal segments.")
 
     candidate = (base / raw_candidate).resolve(strict=False)
     try:
