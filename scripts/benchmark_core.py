@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from collections import Counter
 from dataclasses import dataclass, field
@@ -763,11 +764,48 @@ def parse(
     return parsed
 
 
+def resolve_output_path(output: str | Path, base_path: str | Path | None = None) -> Path:
+    base = Path(base_path or os.getcwd()).resolve(strict=False)
+    normalized_base = os.path.normcase(str(base))
+    raw_output = os.fspath(output).strip()
+    if not raw_output:
+        raise ValueError("Output path must be a non-empty path within the current working directory.")
+    if "\x00" in raw_output:
+        raise ValueError("Output path contains invalid characters.")
+    if not re.fullmatch(r"[A-Za-z0-9._\-/\\ ]+", raw_output):
+        raise ValueError("Output path contains unsupported characters.")
+
+    raw_candidate = Path(raw_output).expanduser()
+    if raw_candidate.is_absolute():
+        raise ValueError("Output path must be a relative path within the current working directory.")
+    if any(part in {".", ".."} for part in raw_candidate.parts):
+        raise ValueError("Output path must not contain traversal segments.")
+
+    candidate = (base / raw_candidate).resolve(strict=False)
+    try:
+        within_base = os.path.commonpath((normalized_base, os.path.normcase(str(candidate)))) == normalized_base
+    except ValueError:
+        within_base = False
+
+    if not within_base or candidate == base:
+        raise ValueError("Output path must be within the current working directory.")
+
+    return candidate
+
+
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
-    output_path = Path(output)
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2) + "\n",
-        encoding="utf-8",
-    )
-    return output_path
+    candidate = resolve_output_path(output)
+    base_path = os.path.normcase(os.path.realpath(os.getcwd()))
+    output_path = os.path.normcase(os.path.realpath(os.fspath(candidate)))
+    try:
+        within_base = os.path.commonpath((base_path, output_path)) == base_path
+    except ValueError:
+        within_base = False
+
+    if not within_base or output_path == base_path:
+        raise ValueError("Output path must be within the current working directory.")
+
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as handle:
+        handle.write(json.dumps(data, ensure_ascii=False, indent=2) + "\n")
+    return Path(output_path)

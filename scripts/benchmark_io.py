@@ -7,9 +7,9 @@ from pathlib import Path
 from datasets import load_dataset
 
 try:
-    from scripts.benchmark_core import parse, save
+    from scripts.benchmark_core import parse, resolve_output_path, save
 except ModuleNotFoundError:
-    from benchmark_core import parse, save
+    from benchmark_core import parse, resolve_output_path, save
 
 
 def load(dataset: str, task: str | None = None, split: str | None = None):
@@ -29,6 +29,13 @@ def load(dataset: str, task: str | None = None, split: str | None = None):
     return load_dataset(dataset, token=token)
 
 
+def _output_path_arg(value: str) -> Path:
+    try:
+        return resolve_output_path(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError(str(exc)) from exc
+
+
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Load a Hugging Face benchmark and save a compact question set."
@@ -38,7 +45,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--split", default=None, help="Optional dataset split to load")
     parser.add_argument(
         "--output",
-        type=Path,
+        type=_output_path_arg,
         required=True,
         help="Output JSON file path for the compact parsed benchmark",
     )
