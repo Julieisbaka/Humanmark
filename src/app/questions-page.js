@@ -139,23 +139,51 @@ export async function renderQuestions(appData) {
 		persistProgress();
 	};
 
+	const syncQuestionNoteToggle = (detailsElement) => {
+		const toggleLabel = detailsElement.querySelector('.question-note-toggle');
+		if (!toggleLabel) {
+			return;
+		}
+
+		toggleLabel.textContent = detailsElement.open ? 'Hide note' : 'Show note';
+	};
+
+	container.addEventListener('toggle', (event) => {
+		const detailsElement = event.target;
+		if (!(detailsElement instanceof HTMLElement) || !detailsElement.classList.contains('question-note')) {
+			return;
+		}
+
+		syncQuestionNoteToggle(detailsElement);
+	}, true);
+
 	const renderPage = () => {
 		const currentQuestions = pageWindow();
 		status.textContent = `${benchmark.name} · ${selectedQuestions.length} question${selectedQuestions.length === 1 ? '' : 's'} · page ${currentPage}/${totalPages}`;
 
 		container.innerHTML = `
-			<article class="panel panel--soft tool-policy-note">
-				<p class="eyebrow">Tool policy</p>
+			<details class="panel panel--soft tool-policy-note question-note">
+				<summary>
+					<span class="question-note-summary-row">
+						<span class="eyebrow">Tool policy</span>
+						<span class="question-note-toggle">Show note</span>
+					</span>
+				</summary>
 				<p>${summarizeToolPolicy(benchmark.toolPolicy)}</p>
-			</article>
+			</details>
 			${standardizedAnswerMode ? `
-				<article class="panel panel--soft aime-scoring-note">
-					<p class="eyebrow">AIME scoring</p>
+				<details class="panel panel--soft aime-scoring-note question-note">
+					<summary>
+						<span class="question-note-summary-row">
+							<span class="eyebrow">AIME scoring</span>
+							<span class="question-note-toggle">Show note</span>
+						</span>
+					</summary>
 					<p>
 						Answers on AIME are scored with logic-based normalization instead of multiple choice.
 						Enter the exact mathematical answer; equivalent integer forms are accepted when they normalize to the same value.
 					</p>
-				</article>
+				</details>
 			` : ''}
 			<form class="stack" data-role="question-form">
 			${currentQuestions
@@ -249,6 +277,10 @@ export async function renderQuestions(appData) {
 		const form = container.querySelector('[data-role="question-form"]');
 		const prevButton = container.querySelector('[data-role="prev-page"]');
 		const nextButton = container.querySelector('[data-role="next-page"]');
+
+		container.querySelectorAll('.question-note').forEach((detailsElement) => {
+			syncQuestionNoteToggle(detailsElement);
+		});
 		prevButton?.addEventListener('click', () => {
 			flushPendingCrossoutSave();
 			collectCurrentPageResponses();
