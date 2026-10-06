@@ -92,41 +92,34 @@ export function initTruncationExpanders(root = document) {
 			return null;
 		}
 
-		let observer = resizeObservers.get(ownerDocument);
+		let observer = resizeObservers.get(root);
 		if (!observer) {
 			observer = new window.ResizeObserver((entries) => {
 				entries.forEach(({ target }) => {
-					if (!(target instanceof HTMLElement)) {
+					if (!(target instanceof HTMLElement) || !root.contains(target)) {
 						return;
 					}
 					reconcileExpander(target, ownerDocument);
 				});
 			});
-			resizeObservers.set(ownerDocument, observer);
+			resizeObservers.set(root, observer);
 		}
 		return observer;
 	};
 
 	const initialize = () => {
 		const elements = root.querySelectorAll('.content-truncate');
+		const ownerDocument = root.ownerDocument || document;
+		const observer = getResizeObserver(ownerDocument);
+		observer?.disconnect();
 
 		elements.forEach((element) => {
-			if (!(element instanceof HTMLElement) || element.dataset.expandReady === 'true') {
+			if (!(element instanceof HTMLElement)) {
 				return;
 			}
 
-			const observer = getResizeObserver(element.ownerDocument || document);
-			if (observer && element.dataset.expandObserved !== 'true') {
-				observer.observe(element);
-				element.dataset.expandObserved = 'true';
-			}
-
-			if (!isTruncated(element)) {
-				return;
-			}
-
-			const ownerDocument = element.ownerDocument || document;
-			createExpander(element, ownerDocument);
+			observer?.observe(element);
+			reconcileExpander(element, ownerDocument);
 		});
 	};
 

@@ -263,7 +263,8 @@
 }
 
 .choice-item {
-	display: flex;
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) auto;
 	align-items: flex-start;
 	justify-content: space-between;
 	gap: 12px;
@@ -281,6 +282,12 @@
 	flex: 1;
 	min-width: 0;
 	cursor: pointer;
+}
+
+.choice-item > .content-expand-button {
+	grid-column: 1;
+	margin-top: 0;
+	justify-self: start;
 }
 
 .choice-text {
@@ -335,6 +342,8 @@
 }
 
 .choice-crossout-button {
+	grid-column: 2;
+	grid-row: 1;
 	flex: 0 0 auto;
 	align-self: center;
 	padding: 7px 10px;

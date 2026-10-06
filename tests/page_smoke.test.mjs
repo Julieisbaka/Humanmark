@@ -473,6 +473,7 @@ test('truncation expanders reconcile when resize changes truncation state', () =
 			resizeCallback = callback;
 		}
 		observe() {}
+		disconnect() {}
 	};
 
 	initTruncationExpanders(document);
@@ -499,5 +500,91 @@ test('truncation expanders reconcile when resize changes truncation state', () =
 	assert.equal(truncated.classList.contains('content-truncate--expanded'), false);
 
 	window.ResizeObserver = originalResizeObserver;
+	dom.window.close();
+});
+
+test('choice expanders occupy a separate row without selecting or crossing out the answer', async () => {
+	const dom = setupDom(`
+		<div class="choice-item">
+			<label class="choice-select">
+				<input type="radio" name="answer" />
+				<span class="choice-text content-truncate">Long answer</span>
+			</label>
+			<button type="button" class="choice-crossout-button">Cross out</button>
+		</div>
+	`);
+	const { readFile } = await import('node:fs/promises');
+	const style = document.createElement('style');
+	style.textContent = await readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8');
+	document.head.append(style);
+	const answer = document.querySelector('.choice-text');
+	mockElementDimensions(answer, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+
+	initTruncationExpanders(document);
+	const button = document.querySelector('.content-expand-button');
+	const crossout = document.querySelector('.choice-crossout-button');
+	assert.equal(button.parentElement, document.querySelector('.choice-item'));
+	assert.equal(button.closest('label'), null);
+	assert.equal(window.getComputedStyle(button.parentElement).display, 'grid');
+	assert.equal(window.getComputedStyle(button.parentElement).gridTemplateColumns, 'minmax(0, 1fr) auto');
+	assert.equal(window.getComputedStyle(button).gridColumn, '1');
+	assert.equal(window.getComputedStyle(crossout).gridColumn, '2');
+	assert.equal(window.getComputedStyle(crossout).gridRow, '1');
+
+	button.click();
+	assert.equal(answer.classList.contains('content-truncate--expanded'), true);
+	assert.equal(document.querySelector('input').checked, false);
+	assert.equal(crossout.textContent, 'Cross out');
+	assert.equal(crossout.parentElement.classList.contains('choice-item--crossed'), false);
+	dom.window.close();
+});
+
+test('truncation observers release replaced content and stay scoped to each root', () => {
+	const dom = setupDom(`
+		<div id="questions"><div class="content-truncate">Old question</div></div>
+		<div id="review"><div class="content-truncate">Review answer</div></div>
+	`);
+	const observers = [];
+	window.ResizeObserver = class {
+		targets = new Set();
+		constructor(callback) {
+			this.callback = callback;
+			observers.push(this);
+		}
+		observe(target) {
+			this.targets.add(target);
+		}
+		disconnect() {
+			this.targets.clear();
+		}
+	};
+	const queuedFrames = [];
+	window.requestAnimationFrame = (callback) => queuedFrames.push(callback);
+	const questions = document.querySelector('#questions');
+	const review = document.querySelector('#review');
+	const oldQuestion = questions.firstElementChild;
+	mockElementDimensions(oldQuestion, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	initTruncationExpanders(questions);
+	initTruncationExpanders(review);
+	assert.equal(observers.length, 2);
+	assert.deepEqual([...observers[0].targets], [oldQuestion]);
+	assert.deepEqual([...observers[1].targets], [review.firstElementChild]);
+
+	questions.innerHTML = '<div class="content-truncate">New question</div>';
+	const newQuestion = questions.firstElementChild;
+	mockElementDimensions(newQuestion, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	initTruncationExpanders(questions);
+	queuedFrames.forEach((callback) => callback());
+	assert.equal(observers.length, 2);
+	assert.deepEqual([...observers[0].targets], [newQuestion]);
+	assert.deepEqual([...observers[1].targets], [review.firstElementChild]);
+	assert.equal(questions.querySelectorAll('.content-expand-button').length, 1);
+
+	mockElementDimensions(oldQuestion, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+	observers[0].callback([{ target: oldQuestion }]);
+	assert.equal(oldQuestion.dataset.expandReady, 'true');
+	questions.innerHTML = '';
+	initTruncationExpanders(questions);
+	assert.equal(observers[0].targets.size, 0);
 	dom.window.close();
 });
