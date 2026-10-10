@@ -772,17 +772,13 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
         raise ValueError("Output path must be a non-empty path within the current working directory.")
     if "\x00" in raw_output:
         raise ValueError("Output path contains invalid characters.")
-    raw_candidate = Path(raw_output).expanduser()
-    candidate = (base / raw_candidate).resolve(strict=False)
-    try:
-        within_base = os.path.commonpath((normalized_base, os.path.normcase(str(candidate)))) == normalized_base
-    except ValueError:
-        within_base = False
-
-    if not within_base or candidate == base:
+    candidate = os.path.realpath(os.path.join(str(base), os.path.expanduser(raw_output)))
+    normalized_candidate = os.path.normcase(candidate)
+    base_prefix = normalized_base.rstrip(os.sep) + os.sep
+    if not normalized_candidate.startswith(base_prefix) or normalized_candidate == normalized_base:
         raise ValueError("Output path must be within the current working directory.")
 
-    return candidate
+    return Path(candidate)
 
 
 def save(data: list[dict[str, Any]], output: str | Path) -> Path:
