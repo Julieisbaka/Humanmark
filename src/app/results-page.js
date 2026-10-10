@@ -1,5 +1,5 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
-import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines, numberStandaloneBulletLists } from './shared.js';
+import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, initTruncationExpanders, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines, numberStandaloneBulletLists } from './shared.js';
 import { getModels, getState } from './runtime.js';
 
 const LEADERBOARD_CONTEXT_WINDOW = 5;
@@ -296,4 +296,5 @@ export async function renderResults(appData) {
 	});
 
 	renderMathIn(review);
+	initTruncationExpanders(review);
 }

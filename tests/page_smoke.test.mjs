@@ -6,6 +6,7 @@ import { renderHome } from '../src/app/home-page.js';
 import { renderSettings } from '../src/app/settings-page.js';
 import { renderQuestions } from '../src/app/questions-page.js';
 import { renderResults } from '../src/app/results-page.js';
+import { initTruncationExpanders } from '../src/app/shared/truncation.js';
 import { STATE_KEY } from '../src/score.js';
 import { SETTINGS_KEY } from '../src/app/shared/constants.js';
 
@@ -36,6 +37,15 @@ function setupDom(bodyHtml, url = 'http://localhost/src/index.html') {
 function delay(ms) {
 	return new Promise((resolve) => {
 		setTimeout(resolve, ms);
+	});
+}
+
+function mockElementDimensions(element, dimensions) {
+	Object.defineProperties(element, {
+		clientHeight: { configurable: true, value: dimensions.clientHeight },
+		scrollHeight: { configurable: true, value: dimensions.scrollHeight },
+		clientWidth: { configurable: true, value: dimensions.clientWidth },
+		scrollWidth: { configurable: true, value: dimensions.scrollWidth },
 	});
 }
 
@@ -496,5 +506,199 @@ test('results page respects leaderboard truncation setting and show-more expansi
 	assert.equal(expandedRows, 31);
 
 	globalThis.fetch = originalFetch;
+	dom.window.close();
+});
+
+test('truncation expanders only attach for truncated content and toggle state on click', () => {
+	const dom = setupDom(`
+		<div class="content-truncate question-prompt" data-role="truncated">Long question</div>
+		<div class="content-truncate" data-role="not-truncated">Short text</div>
+	`);
+
+	const truncated = document.querySelector('[data-role="truncated"]');
+	const notTruncated = document.querySelector('[data-role="not-truncated"]');
+	assert.ok(truncated);
+	assert.ok(notTruncated);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	mockElementDimensions(notTruncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+
+	initTruncationExpanders(document);
+
+	const button = document.querySelector('[data-role="content-expand-toggle"]');
+	assert.ok(button);
+	assert.equal(button.textContent, 'Expand');
+	assert.equal(button.getAttribute('aria-expanded'), 'false');
+	assert.equal(button.getAttribute('aria-label'), 'Expand full question');
+	assert.equal(notTruncated.nextElementSibling?.dataset.role, undefined);
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+	assert.equal(button.textContent, 'Collapse');
+	assert.equal(button.getAttribute('aria-expanded'), 'true');
+	assert.equal(button.getAttribute('aria-label'), 'Collapse full question');
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+	assert.equal(button.textContent, 'Expand');
+	assert.equal(button.getAttribute('aria-expanded'), 'false');
+	assert.equal(button.getAttribute('aria-label'), 'Expand full question');
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), false);
+
+	dom.window.close();
+});
+
+test('truncation expander initialization detects delayed truncation and stays idempotent', () => {
+	const dom = setupDom('<div class="content-truncate" data-role="truncated">Long content</div>');
+	const truncated = document.querySelector('[data-role="truncated"]');
+	assert.ok(truncated);
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+
+	const queuedFrames = [];
+	const originalRequestAnimationFrame = window.requestAnimationFrame;
+	window.requestAnimationFrame = (callback) => {
+		queuedFrames.push(callback);
+		return queuedFrames.length;
+	};
+
+	initTruncationExpanders(document);
+	initTruncationExpanders(document);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	queuedFrames.forEach((callback) => callback());
+
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 1);
+	assert.equal(truncated.dataset.expandReady, 'true');
+
+	window.requestAnimationFrame = originalRequestAnimationFrame;
+	dom.window.close();
+});
+
+test('truncation expanders reconcile when resize changes truncation state', () => {
+	const dom = setupDom('<div class="content-truncate" data-role="truncated">Long content</div>');
+	const truncated = document.querySelector('[data-role="truncated"]');
+	assert.ok(truncated);
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+
+	let resizeCallback = null;
+	const originalResizeObserver = window.ResizeObserver;
+	window.ResizeObserver = class {
+		constructor(callback) {
+			resizeCallback = callback;
+		}
+		observe() {}
+		disconnect() {}
+	};
+
+	initTruncationExpanders(document);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+	assert.ok(resizeCallback);
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	resizeCallback([{ target: truncated }]);
+	const button = document.querySelector('[data-role="content-expand-toggle"]');
+	assert.ok(button);
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+	assert.equal(button.textContent, 'Collapse');
+
+	mockElementDimensions(truncated, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+	resizeCallback([{ target: truncated }]);
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 1);
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), true);
+	assert.equal(button.textContent, 'Collapse');
+
+	button.dispatchEvent(new window.MouseEvent('click', { bubbles: true }));
+	assert.equal(document.querySelectorAll('[data-role="content-expand-toggle"]').length, 0);
+	assert.equal(truncated.classList.contains('content-truncate--expanded'), false);
+
+	window.ResizeObserver = originalResizeObserver;
+	dom.window.close();
+});
+
+test('choice expanders occupy a separate row without selecting or crossing out the answer', async () => {
+	const dom = setupDom(`
+		<div class="choice-item">
+			<label class="choice-select">
+				<input type="radio" name="answer" />
+				<span class="choice-text content-truncate">Long answer</span>
+			</label>
+			<button type="button" class="choice-crossout-button">Cross out</button>
+		</div>
+	`);
+	const { readFile } = await import('node:fs/promises');
+	const style = document.createElement('style');
+	style.textContent = await readFile(new URL('../src/styles/components.css', import.meta.url), 'utf8');
+	document.head.append(style);
+	const answer = document.querySelector('.choice-text');
+	mockElementDimensions(answer, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+
+	initTruncationExpanders(document);
+	const button = document.querySelector('.content-expand-button');
+	const crossout = document.querySelector('.choice-crossout-button');
+	assert.equal(button.parentElement, document.querySelector('.choice-item'));
+	assert.equal(button.closest('label'), null);
+	assert.equal(window.getComputedStyle(button.parentElement).display, 'grid');
+	assert.equal(window.getComputedStyle(button.parentElement).gridTemplateColumns, 'minmax(0, 1fr) auto');
+	assert.equal(window.getComputedStyle(button).gridColumn, '1');
+	assert.equal(window.getComputedStyle(crossout).gridColumn, '2');
+	assert.equal(window.getComputedStyle(crossout).gridRow, '1');
+
+	button.click();
+	assert.equal(answer.classList.contains('content-truncate--expanded'), true);
+	assert.equal(document.querySelector('input').checked, false);
+	assert.equal(crossout.textContent, 'Cross out');
+	assert.equal(crossout.parentElement.classList.contains('choice-item--crossed'), false);
+	dom.window.close();
+});
+
+test('truncation observers release replaced content and stay scoped to each root', () => {
+	const dom = setupDom(`
+		<div id="questions"><div class="content-truncate">Old question</div></div>
+		<div id="review"><div class="content-truncate">Review answer</div></div>
+	`);
+	const observers = [];
+	window.ResizeObserver = class {
+		targets = new Set();
+		constructor(callback) {
+			this.callback = callback;
+			observers.push(this);
+		}
+		observe(target) {
+			this.targets.add(target);
+		}
+		disconnect() {
+			this.targets.clear();
+		}
+	};
+	const queuedFrames = [];
+	window.requestAnimationFrame = (callback) => queuedFrames.push(callback);
+	const questions = document.querySelector('#questions');
+	const review = document.querySelector('#review');
+	const oldQuestion = questions.firstElementChild;
+	mockElementDimensions(oldQuestion, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	initTruncationExpanders(questions);
+	initTruncationExpanders(review);
+	assert.equal(observers.length, 2);
+	assert.deepEqual([...observers[0].targets], [oldQuestion]);
+	assert.deepEqual([...observers[1].targets], [review.firstElementChild]);
+
+	questions.innerHTML = '<div class="content-truncate">New question</div>';
+	const newQuestion = questions.firstElementChild;
+	mockElementDimensions(newQuestion, { clientHeight: 20, scrollHeight: 60, clientWidth: 100, scrollWidth: 100 });
+	initTruncationExpanders(questions);
+	queuedFrames.forEach((callback) => callback());
+	assert.equal(observers.length, 2);
+	assert.deepEqual([...observers[0].targets], [newQuestion]);
+	assert.deepEqual([...observers[1].targets], [review.firstElementChild]);
+	assert.equal(questions.querySelectorAll('.content-expand-button').length, 1);
+
+	mockElementDimensions(oldQuestion, { clientHeight: 20, scrollHeight: 20, clientWidth: 100, scrollWidth: 100 });
+	observers[0].callback([{ target: oldQuestion }]);
+	assert.equal(oldQuestion.dataset.expandReady, 'true');
+	questions.innerHTML = '';
+	initTruncationExpanders(questions);
+	assert.equal(observers[0].targets.size, 0);
 	dom.window.close();
 });

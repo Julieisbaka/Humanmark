@@ -1,5 +1,5 @@
 import { scoreBenchmark } from '../score.js';
-import { escapeAttribute, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, sortQuestionChoicesForHumans, stripDuplicatedChoiceLines, numberStandaloneBulletLists, summarizeToolPolicy, clampQuestionsPerPage } from './shared.js';
+import { escapeAttribute, initTruncationExpanders, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, sortQuestionChoicesForHumans, stripDuplicatedChoiceLines, numberStandaloneBulletLists, summarizeToolPolicy, clampQuestionsPerPage } from './shared.js';
 import { getModels, getState } from './runtime.js';
 import { saveState } from '../score.js';
 
@@ -318,6 +318,7 @@ export async function renderQuestions(appData) {
 		});
 
 		renderMathIn(container);
+		initTruncationExpanders(container);
 	};
 
 	container.addEventListener('click', (event) => {
