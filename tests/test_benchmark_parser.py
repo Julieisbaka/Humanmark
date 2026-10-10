@@ -14,6 +14,7 @@ if str(ROOT) not in sys.path:
 from scripts.benchmark import parse
 from scripts.benchmark_core import save
 from scripts.benchmark_io import parse_args
+from scripts.benchmark_io import main
 
 
 class BenchmarkParserTests(unittest.TestCase):
@@ -171,6 +172,22 @@ class BenchmarkParserTests(unittest.TestCase):
                                 parse_args()
             finally:
                 os.chdir(original_cwd)
+
+    def test_cli_saves_validated_output_path(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with mock.patch("os.getcwd", return_value=tmpdir), mock.patch.object(
+                sys, "argv", ["benchmark.py", "demo/dataset", "--output", "nested/result.json"]
+            ), mock.patch("scripts.benchmark_io.load", return_value=[]), mock.patch("builtins.print"):
+                main()
+            self.assertEqual("[]\n", (pathlib.Path(tmpdir) / "nested/result.json").read_text())
+
+    def test_save_accepts_output_when_cwd_is_filesystem_root(self):
+        root = pathlib.Path(pathlib.Path.cwd().anchor)
+        with tempfile.TemporaryDirectory() as tmpdir:
+            output = pathlib.Path(tmpdir) / "benchmark.json"
+            with mock.patch("os.getcwd", return_value=str(root)):
+                self.assertEqual(output.resolve(), save([], output))
+            self.assertEqual("[]\n", output.read_text())
 
     def test_save_and_cli_reject_blank_output_paths(self):
         with self.assertRaisesRegex(

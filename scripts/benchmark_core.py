@@ -772,15 +772,7 @@ def resolve_output_path(output: str | Path, base_path: str | Path | None = None)
         raise ValueError("Output path must be a non-empty path within the current working directory.")
     if "\x00" in raw_output:
         raise ValueError("Output path contains invalid characters.")
-    if not re.fullmatch(r"[A-Za-z0-9._\-/\\ ]+", raw_output):
-        raise ValueError("Output path contains unsupported characters.")
-
     raw_candidate = Path(raw_output).expanduser()
-    if raw_candidate.is_absolute():
-        raise ValueError("Output path must be a relative path within the current working directory.")
-    if any(part in {".", ".."} for part in raw_candidate.parts):
-        raise ValueError("Output path must not contain traversal segments.")
-
     candidate = (base / raw_candidate).resolve(strict=False)
     try:
         within_base = os.path.commonpath((normalized_base, os.path.normcase(str(candidate)))) == normalized_base
@@ -797,12 +789,8 @@ def save(data: list[dict[str, Any]], output: str | Path) -> Path:
     candidate = resolve_output_path(output)
     base_path = os.path.normcase(os.path.realpath(os.getcwd()))
     output_path = os.path.normcase(os.path.realpath(os.fspath(candidate)))
-    try:
-        within_base = os.path.commonpath((base_path, output_path)) == base_path
-    except ValueError:
-        within_base = False
-
-    if not within_base or output_path == base_path:
+    base_prefix = base_path.rstrip(os.sep) + os.sep
+    if not output_path.startswith(base_prefix) or output_path == base_path:
         raise ValueError("Output path must be within the current working directory.")
 
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
