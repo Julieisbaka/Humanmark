@@ -5,8 +5,9 @@ to the GitHub Copilot chat completions API for summarization, and writes the
 result to ``data/changelog.json``.
 
 Required environment variables:
-  GITHUB_TOKEN  — a GitHub token used to call the GitHub Copilot chat
-                  completions API.
+  COPILOT_TOKEN — a GitHub token authorized to call the Copilot chat
+                  completions API.  GITHUB_TOKEN is accepted as a local
+                  compatibility fallback.
 
 Optional environment variables:
   SINCE_SHA     — if set, commits are collected starting from this SHA
@@ -266,8 +267,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--token",
-        default=os.getenv("GITHUB_TOKEN"),
-        help="GitHub token used to call the Copilot API.",
+        default=os.getenv("COPILOT_TOKEN") or os.getenv("GITHUB_TOKEN"),
+        help="Copilot-enabled GitHub token used to call the API.",
     )
     parser.add_argument(
         "--dry-run",
@@ -293,7 +294,7 @@ def main() -> None:
 
     if not args.token:
         raise SystemExit(
-            "No GitHub token found.  Set GITHUB_TOKEN or pass --token."
+            "No Copilot token found.  Set COPILOT_TOKEN or pass --token."
         )
 
     output = generate_changelog(

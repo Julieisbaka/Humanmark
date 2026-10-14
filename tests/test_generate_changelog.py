@@ -19,6 +19,7 @@ from scripts.generate_changelog import (
     _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
+    _parse_args,
     generate_changelog,
 )
 
@@ -38,6 +39,22 @@ class _FakeHTTPResponse:
 
 
 class GenerateChangelogTests(unittest.TestCase):
+    def test_parse_args_prefers_copilot_token_and_accepts_legacy_token(self):
+        with patch("sys.argv", ["generate_changelog.py"]):
+            with patch.dict(
+                "scripts.generate_changelog.os.environ",
+                {"COPILOT_TOKEN": "copilot-token", "GITHUB_TOKEN": "legacy-token"},
+                clear=True,
+            ):
+                self.assertEqual("copilot-token", _parse_args().token)
+
+            with patch.dict(
+                "scripts.generate_changelog.os.environ",
+                {"GITHUB_TOKEN": "legacy-token"},
+                clear=True,
+            ):
+                self.assertEqual("legacy-token", _parse_args().token)
+
     def test_generate_changelog_prefers_since_sha_when_present(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = pathlib.Path(temp_dir) / "changelog.json"
