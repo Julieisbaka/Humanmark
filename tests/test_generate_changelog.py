@@ -2,6 +2,7 @@ import json
 import pathlib
 import tempfile
 import unittest
+from io import BytesIO
 from urllib.error import HTTPError
 from unittest.mock import patch
 
@@ -18,6 +19,7 @@ from scripts.generate_changelog import (
     _build_fallback_summary,
     _call_copilot,
     _is_bot_commit,
+    _parse_args,
     generate_changelog,
 )
 
@@ -37,6 +39,22 @@ class _FakeHTTPResponse:
 
 
 class GenerateChangelogTests(unittest.TestCase):
+    def test_parse_args_prefers_copilot_token_and_accepts_legacy_token(self):
+        with patch("sys.argv", ["generate_changelog.py"]):
+            with patch.dict(
+                "scripts.generate_changelog.os.environ",
+                {"COPILOT_TOKEN": "copilot-token", "GITHUB_TOKEN": "legacy-token"},
+                clear=True,
+            ):
+                self.assertEqual("copilot-token", _parse_args().token)
+
+            with patch.dict(
+                "scripts.generate_changelog.os.environ",
+                {"GITHUB_TOKEN": "legacy-token"},
+                clear=True,
+            ):
+                self.assertEqual("legacy-token", _parse_args().token)
+
     def test_generate_changelog_prefers_since_sha_when_present(self):
         with tempfile.TemporaryDirectory() as temp_dir:
             output_path = pathlib.Path(temp_dir) / "changelog.json"
@@ -119,7 +137,7 @@ class GenerateChangelogTests(unittest.TestCase):
             captured["integration_id"],
         )
         self.assertEqual(60, captured["timeout"])
-        self.assertEqual("gpt-4o", captured["payload"]["model"])
+        self.assertEqual("gpt-6-luna", captured["payload"]["model"])
         self.assertEqual("system", captured["payload"]["messages"][0]["role"])
         self.assertIn(
             "Use only the supported Markdown features",
@@ -129,6 +147,30 @@ class GenerateChangelogTests(unittest.TestCase):
             "- feat: add changelog",
             captured["payload"]["messages"][1]["content"],
         )
+
+    def test_call_copilot_falls_back_when_primary_model_is_unsupported(self):
+        attempted_models = []
+
+        def fake_urlopen(request, timeout):
+            model = json.loads(request.data.decode("utf-8"))["model"]
+            attempted_models.append(model)
+            if model == "gpt-6-luna":
+                raise HTTPError(
+                    COPILOT_API_URL,
+                    400,
+                    "Bad Request",
+                    hdrs=None,
+                    fp=BytesIO(b'{"error":{"message":"model is not supported"}}'),
+                )
+            return _FakeHTTPResponse(
+                {"choices": [{"message": {"content": "### Updates\n- Working."}}]}
+            )
+
+        with patch("scripts.generate_changelog.urlopen", side_effect=fake_urlopen):
+            summary = _call_copilot(["feat: add changelog"], "token123")
+
+        self.assertEqual("### Updates\n- Working.", summary)
+        self.assertEqual(["gpt-6-luna", "gpt-5.6-luna"], attempted_models)
 
     def test_call_copilot_raises_for_unexpected_api_response(self):
         with patch(
@@ -233,6 +275,32 @@ class GenerateChangelogTests(unittest.TestCase):
                 "### Recent updates\n"
                 "- feat: add changelog\n"
                 "- fix: handle API fallback",
+                payload["summary"],
+            )
+
+    def test_generate_changelog_falls_back_when_copilot_response_is_malformed(self):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            output_path = pathlib.Path(temp_dir) / "changelog.json"
+            with patch(
+                "scripts.generate_changelog._get_commits_since_days",
+                return_value=["feat: add changelog"],
+            ), patch(
+                "scripts.generate_changelog._call_copilot",
+                side_effect=ValueError("Unexpected Copilot API response"),
+            ), patch(
+                "scripts.generate_changelog._get_head_sha",
+                return_value="cafebabe",
+            ):
+                generate_changelog(
+                    output_path=output_path,
+                    since_sha=None,
+                    token="token123",
+                    days=7,
+                )
+
+            payload = json.loads(output_path.read_text(encoding="utf-8"))
+            self.assertEqual(
+                "### Recent updates\n- feat: add changelog",
                 payload["summary"],
             )
 
