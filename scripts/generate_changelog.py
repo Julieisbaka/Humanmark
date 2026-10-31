@@ -141,7 +141,6 @@ def _call_copilot(commit_messages: list[str], token: str) -> str:
                     {"role": "user", "content": user_content},
                 ],
                 "max_tokens": 1024,
-                "temperature": 0.3,
             }
         ).encode("utf-8")
         request = Request(
@@ -157,7 +156,11 @@ def _call_copilot(commit_messages: list[str], token: str) -> str:
             raise
 
         choices = body.get("choices") if isinstance(body, dict) else None
-        if not choices or not isinstance(choices[0], dict):
+        if (
+            not isinstance(choices, list)
+            or not choices
+            or not isinstance(choices[0], dict)
+        ):
             raise ValueError("Unexpected Copilot API response: missing choices.")
         message = choices[0].get("message")
         content = message.get("content") if isinstance(message, dict) else None

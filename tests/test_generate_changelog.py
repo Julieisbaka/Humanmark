@@ -138,6 +138,7 @@ class GenerateChangelogTests(unittest.TestCase):
         )
         self.assertEqual(60, captured["timeout"])
         self.assertEqual("gpt-6-luna", captured["payload"]["model"])
+        self.assertNotIn("temperature", captured["payload"])
         self.assertEqual("system", captured["payload"]["messages"][0]["role"])
         self.assertIn(
             "Use only the supported Markdown features",
@@ -150,10 +151,13 @@ class GenerateChangelogTests(unittest.TestCase):
 
     def test_call_copilot_falls_back_when_primary_model_is_unsupported(self):
         attempted_models = []
+        attempted_payloads = []
 
         def fake_urlopen(request, timeout):
-            model = json.loads(request.data.decode("utf-8"))["model"]
+            payload = json.loads(request.data.decode("utf-8"))
+            model = payload["model"]
             attempted_models.append(model)
+            attempted_payloads.append(payload)
             if model == "gpt-6-luna":
                 raise HTTPError(
                     COPILOT_API_URL,
@@ -171,6 +175,9 @@ class GenerateChangelogTests(unittest.TestCase):
 
         self.assertEqual("### Updates\n- Working.", summary)
         self.assertEqual(["gpt-6-luna", "gpt-5.6-luna"], attempted_models)
+        self.assertTrue(
+            all("temperature" not in payload for payload in attempted_payloads)
+        )
 
     def test_call_copilot_raises_for_unexpected_api_response(self):
         with patch(
@@ -285,8 +292,8 @@ class GenerateChangelogTests(unittest.TestCase):
                 "scripts.generate_changelog._get_commits_since_days",
                 return_value=["feat: add changelog"],
             ), patch(
-                "scripts.generate_changelog._call_copilot",
-                side_effect=ValueError("Unexpected Copilot API response"),
+                "scripts.generate_changelog.urlopen",
+                return_value=_FakeHTTPResponse({"choices": {"unexpected": "shape"}}),
             ), patch(
                 "scripts.generate_changelog._get_head_sha",
                 return_value="cafebabe",
