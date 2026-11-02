@@ -5123,15 +5123,15 @@
           "rank": 381
         },
         {
-          "modelId": "8014c311-fa23-4a4b-8485-8a864db8a113",
-          "model": "Celeris-1",
+          "modelId": "adfae555-f489-4f3e-9064-c6b7fcdd0783",
+          "model": "Granite 4.2 8B",
           "score": 0.631,
           "sampleSize": 0,
           "rank": 382
         },
         {
-          "modelId": "adfae555-f489-4f3e-9064-c6b7fcdd0783",
-          "model": "Granite 4.2 8B",
+          "modelId": "8014c311-fa23-4a4b-8485-8a864db8a113",
+          "model": "Celeris-1",
           "score": 0.631,
           "sampleSize": 0,
           "rank": 383
@@ -9259,15 +9259,15 @@
           "rank": 354
         },
         {
-          "modelId": "13358187-4584-479c-ab43-5bcdf8f297a4",
-          "model": "Claude 3.7 Sonnet (Reasoning)",
+          "modelId": "adfae555-f489-4f3e-9064-c6b7fcdd0783",
+          "model": "Granite 4.2 8B",
           "score": 0.097,
           "sampleSize": 0,
           "rank": 355
         },
         {
-          "modelId": "adfae555-f489-4f3e-9064-c6b7fcdd0783",
-          "model": "Granite 4.2 8B",
+          "modelId": "13358187-4584-479c-ab43-5bcdf8f297a4",
+          "model": "Claude 3.7 Sonnet (Reasoning)",
           "score": 0.097,
           "sampleSize": 0,
           "rank": 356
