@@ -1,7 +1,7 @@
 {
-  "generatedAt": "2026-11-16T06:35:13.092328+00:00",
+  "generatedAt": "2026-11-16T18:03:18.008241+00:00",
   "generatedBy": "copilot",
-  "headSha": "944ec84e9df43f2826cffe8a9ee4c68620f20af8",
-  "commitCount": 1,
-  "summary": "### Recent updates\n- build(deps-dev): bump jsdom from 30.1.2 to 31.0.0"
+  "headSha": "896f278bb26d41d8cf78a2e1bb90f4cf81e5430b",
+  "commitCount": 0,
+  "summary": "Refreshed data from sources."
 }
