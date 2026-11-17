@@ -4,18 +4,18 @@
 
 :root {
 	color-scheme: dark;
-	--bg: #0a0f18;
-	--panel: #121826;
-	--panel-soft: #171f30;
-	--border: rgba(255, 255, 255, 0.12);
-	--text: #f3f4f6;
-	--muted: #b8c0ce;
-	--accent: #8ab4f8;
-	--accent-2: #cbd5e1;
-	--success: #22c55e;
-	--warning: #f59e0b;
-	--danger: #ef4444;
-	--shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
+	--bg: #0c1110;
+	--panel: #141b19;
+	--panel-soft: #19221f;
+	--border: rgba(222, 243, 232, 0.11);
+	--text: #f2f7f3;
+	--muted: #a7b5ad;
+	--accent: #a8f0d1;
+	--accent-2: #d0f7e5;
+	--success: #70dfa5;
+	--warning: #edc77a;
+	--danger: #f08787;
+	--shadow: 0 24px 64px rgba(0, 0, 0, 0.32);
 }
 
 html,
@@ -27,7 +27,10 @@ body {
 	margin: 0;
 	font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	color: var(--text);
-	background: var(--bg);
+	background:
+		radial-gradient(ellipse at 50% -18%, rgba(73, 132, 105, 0.2), transparent 48rem),
+		var(--bg);
+	line-height: 1.55;
 }
 
 a {
@@ -35,11 +38,11 @@ a {
 }
 
 .app-shell {
-	width: min(1120px, calc(100% - 32px));
+	width: min(1080px, calc(100% - 40px));
 	margin: 0 auto;
-	padding: 40px 0 56px;
+	padding: 36px 0 72px;
 	display: grid;
-	gap: 24px;
+	gap: 22px;
 }
 
 .panel,
@@ -52,6 +55,7 @@ a {
 	margin: 0;
 	font-size: clamp(2.2rem, 4vw, 4rem);
 	line-height: 1;
+	letter-spacing: -0.055em;
 }
 
 body[data-page='questions'] .page-header h1 {
@@ -100,6 +104,11 @@ body[data-page='questions'] .page-header h1 {
 .back-link {
 	text-decoration: none;
 	color: var(--muted);
+	transition: color 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.back-link:hover {
+	color: var(--text);
 }
 
 .grid {
@@ -152,6 +161,18 @@ button,
 input {
 	font: inherit;
 	touch-action: manipulation;
+}
+
+button,
+a,
+input,
+select {
+	-webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+	outline: 2px solid var(--accent);
+	outline-offset: 3px;
 }
 
 select,
