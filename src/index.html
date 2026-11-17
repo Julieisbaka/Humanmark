@@ -15,11 +15,18 @@
 <body data-page='home'>
     <main class='app-shell'>
         <header class='page-header'>
-            <a class='back-link' href='settings.html'>⚙ Settings</a>
+            <a class='brand-link' href='index.html' aria-label='Humanmark home'>
+                <span class='brand-mark' aria-hidden='true'>H</span>
+                <span>Humanmark</span>
+            </a>
+            <a class='back-link' href='settings.html'>Settings <span aria-hidden='true'>↗</span></a>
         </header>
         <section class='panel'>
             <div class='panel-heading'>
-                <h2>Start a benchmark</h2>
+                <div>
+                    <p class='eyebrow'>Your turn to benchmark</p>
+                    <h1>How do you compare?</h1>
+                </div>
                 <p>Choose a benchmark and how many questions you want to answer.</p>
             </div>
             <form class='stack' data-role='benchmark-form'>
