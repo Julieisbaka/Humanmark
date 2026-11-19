@@ -28,6 +28,18 @@ except ModuleNotFoundError:
     from build_benchmark_index import load_benchmark_definitions
 
 DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/language/models"
+ALLOWED_SOURCE_HOSTS = {"artificialanalysis.ai"}
+
+
+def _validate_source_url(url: str) -> str:
+    parts = urlsplit(url)
+    if parts.scheme != "https":
+        raise ValueError("Source URL must use HTTPS.")
+    if not parts.netloc:
+        raise ValueError("Source URL must include a host.")
+    if parts.hostname not in ALLOWED_SOURCE_HOSTS:
+        raise ValueError("Source URL host is not allowed.")
+    return url
 
 
 def _load_json_from_path(path: Path) -> dict[str, Any]:
@@ -183,7 +195,8 @@ def main() -> None:
         raise SystemExit("No source URL configured.")
 
     if args.source_url.startswith(("http://", "https://")):
-        payload = _load_json_from_url(args.source_url, args.api_key)
+        source_url = _validate_source_url(args.source_url)
+        payload = _load_json_from_url(source_url, args.api_key)
     else:
         payload = _load_json_from_path(Path(args.source_url))
 
