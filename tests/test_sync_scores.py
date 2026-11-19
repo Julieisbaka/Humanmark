@@ -47,7 +47,7 @@ class SyncScoresTests(unittest.TestCase):
         error = HTTPError(DEFAULT_SOURCE_URL, 403, "Forbidden", {}, None)
         with patch("scripts.sync_scores.urlopen", side_effect=[io.BytesIO(json.dumps(first).encode()), error]):
             with self.assertRaises(HTTPError):
-                _load_json_from_url(DEFAULT_SOURCE_URL, None)
+                _load_json_from_url(DEFAULT_SOURCE_URL, "test-key")
 
     def test_load_custom_url_does_not_follow_pagination(self):
         payload = {"pagination": {"page": 1, "total_pages": 2}, "data": []}
