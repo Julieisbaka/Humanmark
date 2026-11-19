@@ -67,7 +67,6 @@ def _load_json_from_url(url: str, api_key: str | None) -> dict[str, Any]:
         raise ValueError("Invalid model list pagination response.")
     page = pagination.get("page")
     total_pages = pagination.get("total_pages")
-    if type(page) is not int or type(total_pages) is not int or page != 1 or total_pages < 1:
         raise ValueError("Invalid model list pagination response.")
 
     query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key != "page"]
