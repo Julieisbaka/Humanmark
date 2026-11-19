@@ -70,6 +70,10 @@ python scripts/build_benchmark_index.py
 python scripts/sync_scores.py
 ```
 
+Score refresh requires an Artificial Analysis Pro or Commercial API key in
+`ARTIFICIAL_ANALYSIS_API_KEY`; the free endpoint does not include individual
+benchmark scores.
+
 These commands will refresh:
 
 - `data/scores/current.json`
