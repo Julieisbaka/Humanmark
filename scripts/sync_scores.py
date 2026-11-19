@@ -37,8 +37,6 @@ def _validate_source_url(url: str) -> str:
         raise ValueError("Source URL must use HTTPS.")
     if not parts.netloc:
         raise ValueError("Source URL must include a host.")
-    if parts.hostname not in ALLOWED_SOURCE_HOSTS:
-        raise ValueError("Source URL host is not allowed.")
     return url
 
 
