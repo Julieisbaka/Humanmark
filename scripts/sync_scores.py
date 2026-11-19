@@ -63,8 +63,9 @@ def _load_json_from_url(url: str, api_key: str | None) -> dict[str, Any]:
     if (parts.scheme, parts.netloc, parts.path) != ("https", "artificialanalysis.ai", "/api/v2/language/models"):
         return payload
 
+    if not api_key:
+        raise ValueError("ARTIFICIAL_ANALYSIS_API_KEY is required for the default model endpoint.")
     if not isinstance(pagination, dict) or not isinstance(payload.get("data"), list):
-        raise ValueError("Invalid model list pagination response.")
     page = pagination.get("page")
     total_pages = pagination.get("total_pages")
     if type(page) is not int or type(total_pages) is not int or page != 1 or total_pages < 1:
