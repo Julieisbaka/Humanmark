@@ -40,7 +40,7 @@ class SyncScoresTests(unittest.TestCase):
         page = {"pagination": {"page": 2, "total_pages": 2}, "data": []}
         with patch("scripts.sync_scores.urlopen", return_value=io.BytesIO(json.dumps(page).encode())):
             with self.assertRaises(ValueError):
-                _load_json_from_url(DEFAULT_SOURCE_URL, None)
+                _load_json_from_url(DEFAULT_SOURCE_URL, "test-key")
 
     def test_load_model_pages_propagates_later_page_failure(self):
         first = {"pagination": {"page": 1, "total_pages": 2}, "data": []}
