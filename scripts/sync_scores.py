@@ -19,6 +19,7 @@ import os
 from pathlib import Path
 from typing import Any, cast
 from urllib.error import HTTPError, URLError
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 from urllib.request import Request, urlopen
 
 try:
@@ -26,7 +27,7 @@ try:
 except ModuleNotFoundError:
     from build_benchmark_index import load_benchmark_definitions
 
-DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/data/llms/models"
+DEFAULT_SOURCE_URL = "https://artificialanalysis.ai/api/v2/language/models"
 
 
 def _load_json_from_path(path: Path) -> dict[str, Any]:
@@ -39,12 +40,39 @@ def _load_json_from_url(url: str, api_key: str | None) -> dict[str, Any]:
     if api_key:
         headers["x-api-key"] = api_key
 
-    request = Request(url, headers=headers)
+    def fetch(page_url: str) -> dict[str, Any]:
+        request = Request(page_url, headers=headers)
+        with urlopen(request, timeout=60) as response:
+            return json.loads(response.read().decode("utf-8"))
 
-    with urlopen(request, timeout=60) as response:
-        payload = response.read().decode("utf-8")
+    payload = fetch(url)
+    parts = urlsplit(url)
+    pagination = payload.get("pagination")
+    if (parts.scheme, parts.netloc, parts.path) != ("https", "artificialanalysis.ai", "/api/v2/language/models"):
+        return payload
 
-    return json.loads(payload)
+    if not isinstance(pagination, dict) or not isinstance(payload.get("data"), list):
+        raise ValueError("Invalid model list pagination response.")
+    page = pagination.get("page")
+    total_pages = pagination.get("total_pages")
+    if type(page) is not int or type(total_pages) is not int or page != 1 or total_pages < 1:
+        raise ValueError("Invalid model list pagination response.")
+
+    query = [(key, value) for key, value in parse_qsl(parts.query, keep_blank_values=True) if key != "page"]
+    for next_page in range(2, total_pages + 1):
+        page_url = urlunsplit(parts._replace(query=urlencode([*query, ("page", next_page)])))
+        next_payload = fetch(page_url)
+        next_pagination = next_payload.get("pagination")
+        if (
+            not isinstance(next_payload.get("data"), list)
+            or not isinstance(next_pagination, dict)
+            or next_pagination.get("page") != next_page
+            or next_pagination.get("total_pages") != total_pages
+        ):
+            raise ValueError("Invalid model list pagination response.")
+        payload["data"].extend(next_payload["data"])
+
+    return payload
 
 
 def _extract_snapshot(payload: dict[str, Any], benchmark_configs: list[dict[str, Any]] | None = None) -> dict[str, Any]:
