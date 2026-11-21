@@ -1,6 +1,6 @@
 import { buildLeaderboard, compareAgainstModels, formatDate, formatPercent, formatRank, verdictLabel, getBenchmarkModels } from '../score.js';
 import { DEFAULT_LEADERBOARD_LIMIT, escapeAttribute, escapeHtml, initTruncationExpanders, loadBenchmarkDetails, loadSettings, renderImageGallery, renderInlineMarkdown, renderMarkdown, renderMathIn, stripDuplicatedChoiceLines, numberStandaloneBulletLists } from './shared.js';
-import { getModels, getState } from './runtime.js';
+import { describeScoreSource, getModels, getState } from './runtime.js';
 
 const LEADERBOARD_CONTEXT_WINDOW = 5;
 
@@ -68,6 +68,7 @@ export async function renderResults(appData) {
 			<div class="panel-heading">
 				<h2>Current leaderboard comparison</h2>
 				<p>Sorted by the current stored scores for this benchmark.</p>
+				<p data-role="score-source"></p>
 			</div>
 			<div class="leaderboard-controls">
 				<label class="field">
@@ -106,6 +107,9 @@ export async function renderResults(appData) {
 		</article>
 	`;
 
+	leaderboard.querySelector('[data-role="score-source"]').textContent = describeScoreSource(
+		state.currentModels ? state.scoreSource : appData.currentScores?.benchmarks?.[benchmark.id],
+	);
 	const leaderboardSearch = leaderboard.querySelector('[data-role="leaderboard-search"]');
 	const leaderboardFilter = leaderboard.querySelector('[data-role="leaderboard-filter"]');
 	const leaderboardBody = leaderboard.querySelector('[data-role="leaderboard-body"]');

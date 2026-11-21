@@ -16,7 +16,7 @@ import { normalizeAimeAnswer } from '../src/app/shared/scoring/aime/index.js';
 import { clampLeaderboardLimit, clampQuestionsPerPage, loadSettings, saveSettings } from '../src/app/shared/settings.js';
 import { sortQuestionChoicesForHumans } from '../src/app/shared/sorting.js';
 import { summarizeToolPolicy } from '../src/app/shared/benchmark-data.js';
-import { getTopModel } from '../src/app/runtime.js';
+import { describeScoreSource, getTopModel } from '../src/app/runtime.js';
 
 function setupDom(url = 'http://localhost/src/index.html') {
 	const dom = new JSDOM('<!doctype html><html><body></body></html>', { url });
@@ -26,6 +26,12 @@ function setupDom(url = 'http://localhost/src/index.html') {
 	globalThis.localStorage = window.localStorage;
 	return dom;
 }
+
+test('score source labels distinguish cached and dated OpenRouter scores', () => {
+	assert.equal(describeScoreSource(null), 'Cached scores · source or freshness not recorded');
+	assert.equal(describeScoreSource({ scoreSource: 'OpenRouter', scoresAsOf: 'invalid' }), 'Score source: OpenRouter · as of unknown');
+	assert.match(describeScoreSource({ scoreSource: 'OpenRouter', scoresAsOf: '2026-11-20T00:00:00Z' }), /^Score source: OpenRouter · as of /);
+});
 
 test('scoreResponses computes pass@1 accuracy and bounds', () => {
 	const summary = scoreResponses([
