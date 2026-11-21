@@ -57,6 +57,15 @@ export function getModels(benchmarkId, snapshot) {
 	return getBenchmarkModels(snapshot, benchmarkId);
 }
 
+export function describeScoreSource(benchmarkScores) {
+	const source = benchmarkScores?.scoreSource;
+	const date = benchmarkScores?.scoresAsOf;
+	const validDate = date && !Number.isNaN(Date.parse(date));
+	return source
+		? `Score source: ${source} · as of ${validDate ? new Date(date).toLocaleDateString() : 'unknown'}`
+		: 'Cached scores · source or freshness not recorded';
+}
+
 export function getTopModel(models) {
 	return [...models].sort((left, right) => right.score - left.score)[0] ?? null;
 }

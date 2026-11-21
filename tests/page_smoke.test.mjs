@@ -115,7 +115,13 @@ test('home page selection ignores stale async benchmark detail responses', async
 	const appData = {
 		dataRoot: 'data',
 		benchmarksData: { generatedAt: '2026-08-01T00:00:00.000Z' },
-		currentScores: { benchmarks: {} },
+		currentScores: { benchmarks: {
+			'bench-b': {
+				scoreSource: 'OpenRouter',
+				scoresAsOf: '2026-11-20T00:00:00Z',
+				models: [{ model: '<img src=x onerror=alert(1)>', score: 0.8 }],
+			},
+		} },
 		benchmarkIndex: [
 			{ id: 'bench-a', file: 'bench-a.json', name: 'Benchmark A', description: 'A', options: 2, source: { dataset: 'ds-a' }, questionCount: 1 },
 			{ id: 'bench-b', file: 'bench-b.json', name: 'Benchmark B', description: 'B', options: 2, source: { dataset: 'ds-b' }, questionCount: 2 },
@@ -133,6 +139,9 @@ test('home page selection ignores stale async benchmark detail responses', async
 
 	const previewTitle = document.querySelector('[data-role="benchmark-preview"] h2')?.textContent ?? '';
 	assert.equal(previewTitle, 'Benchmark B');
+	assert.match(document.querySelector('[data-role="score-source"]').textContent, /Score source: OpenRouter/);
+	assert.equal(document.querySelector('[data-role="scoreboard"] img'), null);
+	assert.equal(document.querySelector('[data-role="scoreboard"] strong').textContent, '<img src=x onerror=alert(1)>');
 
 	globalThis.fetch = originalFetch;
 	dom.window.close();

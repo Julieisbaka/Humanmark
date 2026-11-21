@@ -312,6 +312,12 @@ export async function renderQuestions(appData) {
 				completedAt: new Date().toISOString(),
 				score,
 				currentModels,
+				scoreSource: appData.currentScores?.benchmarks?.[benchmark.id]
+					? {
+						scoreSource: appData.currentScores.benchmarks[benchmark.id].scoreSource,
+						scoresAsOf: appData.currentScores.benchmarks[benchmark.id].scoresAsOf,
+					}
+					: null,
 			});
 
 			window.location.href = 'results.html';

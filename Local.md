@@ -70,9 +70,11 @@ python scripts/build_benchmark_index.py
 python scripts/sync_scores.py
 ```
 
-Score refresh requires an Artificial Analysis Pro or Commercial API key in
-`ARTIFICIAL_ANALYSIS_API_KEY`; the free endpoint does not include individual
-benchmark scores.
+Set `OPENROUTER_API_KEY` locally, or as a GitHub Actions repository secret, to
+refresh GPQA Diamond scores from OpenRouter. AIME, Humanity's Last Exam and
+MMLU-Pro retain their cached scores. If the key is missing or the API refresh
+fails, the existing snapshot is retained and a warning is logged. A complete
+cached snapshot is required.
 
 These commands will refresh:
 

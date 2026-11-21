@@ -1,6 +1,6 @@
 import { formatDate, formatPercent, scoreBenchmark, selectQuestions } from '../score.js';
-import { getBenchmark, loadBenchmarkDetails, renderMarkdown, renderMathIn, summarizeToolPolicy } from './shared.js';
-import { getModels, getTopModel } from './runtime.js';
+import { escapeHtml, getBenchmark, loadBenchmarkDetails, renderMarkdown, renderMathIn, summarizeToolPolicy } from './shared.js';
+import { describeScoreSource, getModels, getTopModel } from './runtime.js';
 import { createLatestTaskGuard } from './shared/async-guard.js';
 import { logAppEvent, logAppWarning } from './shared/telemetry.js';
 
@@ -111,13 +111,14 @@ export function renderHome(appData) {
 				<p class="eyebrow">Stored scores</p>
 				<h2>Current leaderboard</h2>
 				<p>
-					Top model this week: <strong>${topCurrent?.model ?? 'Unavailable'}</strong>
+					Top stored model: <strong>${escapeHtml(topCurrent?.model ?? 'Unavailable')}</strong>
 					(${topCurrent ? formatPercent(topCurrent.score) : 'n/a'})
 				</p>
-				<p>Comparisons use the current score snapshot from JSON.</p>
+				<p data-role="score-source"></p>
 			</article>
 		`;
 
+		scoreboard.querySelector('[data-role="score-source"]').textContent = describeScoreSource(currentScores?.benchmarks?.[benchmark.id]);
 		renderMathIn(preview);
 	};
 
