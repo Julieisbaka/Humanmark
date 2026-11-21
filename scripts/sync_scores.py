@@ -14,6 +14,7 @@ each benchmark definition.  No Python changes are needed when adding benchmarks.
 from __future__ import annotations
 
 import argparse
+from http.client import HTTPException
 import json
 import math
 import os
@@ -234,8 +235,8 @@ def _parse_args() -> argparse.Namespace:
     )
     parser.add_argument(
         "--api-key",
-        default=os.getenv("ARTIFICIAL_ANALYSIS_API_KEY"),
-        help="Optional bearer token for the score source.",
+        default=None,
+        help="API key for the selected score source (or use its environment variable).",
     )
     parser.add_argument(
         "--current-file",
@@ -258,13 +259,13 @@ def main() -> None:
             for cfg in load_benchmark_definitions()
         ):
             raise ValueError("A complete cached score snapshot is required.")
-        api_key = os.getenv("OPENROUTER_API_KEY")
+        api_key = args.api_key or os.getenv("OPENROUTER_API_KEY")
         if not api_key:
             print("OPENROUTER_API_KEY not configured; retaining cached score snapshot.", file=sys.stderr)
             return
         try:
             updated = _merge_openrouter_scores(cached, _load_openrouter_scores(api_key))
-        except (HTTPError, URLError, ValueError, TimeoutError, OSError) as exc:
+        except (HTTPError, URLError, HTTPException, ValueError, TimeoutError, OSError) as exc:
             print(f"OpenRouter score refresh failed ({exc}); retaining cached score snapshot.", file=sys.stderr)
             return
         _write_json(args.current_file, updated)
@@ -273,7 +274,7 @@ def main() -> None:
 
     if args.source_url.startswith(("http://", "https://")):
         source_url = _validate_source_url(args.source_url)
-        payload = _load_json_from_url(source_url, args.api_key)
+        payload = _load_json_from_url(source_url, args.api_key or os.getenv("ARTIFICIAL_ANALYSIS_API_KEY"))
     else:
         payload = _load_json_from_path(Path(args.source_url))
 

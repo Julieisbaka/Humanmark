@@ -1,6 +1,7 @@
 import io
 import json
 import argparse
+from http.client import IncompleteRead
 import pathlib
 import tempfile
 import unittest
@@ -73,13 +74,15 @@ class SyncScoresTests(unittest.TestCase):
             path = pathlib.Path(temp_dir) / "current.json"
             original = json.dumps(cached)
             path.write_text(original, encoding="utf-8")
-            args = argparse.Namespace(source_url=None, current_file=path)
+            args = argparse.Namespace(source_url=None, current_file=path, api_key=None)
             with patch("scripts.sync_scores._parse_args", return_value=args):
                 with patch.dict("os.environ", {}, clear=True), patch("scripts.sync_scores._load_openrouter_scores") as fetch:
                     main()
                     fetch.assert_not_called()
                 with patch.dict("os.environ", {"OPENROUTER_API_KEY": "example-key"}):
                     with patch("scripts.sync_scores._load_openrouter_scores", side_effect=HTTPError(OPENROUTER_URL, 401, "Unauthorized", {}, None)):
+                        main()
+                    with patch("scripts.sync_scores._load_openrouter_scores", side_effect=IncompleteRead(b"partial")):
                         main()
             self.assertEqual(original, path.read_text(encoding="utf-8"))
 
@@ -95,11 +98,12 @@ class SyncScoresTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             path = pathlib.Path(temp_dir) / "current.json"
             path.write_text(json.dumps(cached), encoding="utf-8")
-            args = argparse.Namespace(source_url=None, current_file=path)
+            args = argparse.Namespace(source_url=None, current_file=path, api_key="cli-key")
             with patch("scripts.sync_scores._parse_args", return_value=args):
-                with patch.dict("os.environ", {"OPENROUTER_API_KEY": "example-key"}):
-                    with patch("scripts.sync_scores._load_openrouter_scores", return_value=payload):
+                with patch.dict("os.environ", {}, clear=True):
+                    with patch("scripts.sync_scores._load_openrouter_scores", return_value=payload) as fetch:
                         main()
+                        fetch.assert_called_once_with("cli-key")
             result = json.loads(path.read_text(encoding="utf-8"))
             self.assertEqual("A", result["benchmarks"]["gpqa_diamond"]["models"][0]["model"])
             self.assertEqual(cached["benchmarks"]["aime"], result["benchmarks"]["aime"])
